@@ -1,12 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/utils/deferred_navigation.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/secondary_button.dart';
-import '../../../../core/theme/app_theme.dart';
 
-class WelcomeScreen extends StatelessWidget {
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
+
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        final user = session.user;
+        String? role = user.userMetadata?['role'] as String?;
+        if (role == null) {
+          try {
+            final profileData = await Supabase.instance.client
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .maybeSingle();
+            if (profileData != null) {
+              role = profileData['role'] as String?;
+            }
+          } catch (e) {
+            debugPrint('Error fetching role: $e');
+          }
+        }
+        if (mounted) {
+          if (role == 'admin' || role == 'superadmin') {
+            await goDeferred(
+              context,
+              '/admin-dashboard',
+              extra: {'role': role},
+            );
+          } else {
+            await goDeferred(context, '/home');
+          }
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,16 +63,22 @@ class WelcomeScreen extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topCenter,
-            end: Alignment(0, -0.2), // Membaur dengan putih lebih cepat (sekitar bagian atas-tengah)
+            end: Alignment(
+              0,
+              -0.2,
+            ), // Membaur dengan putih lebih cepat (sekitar bagian atas-tengah)
             colors: [
               Color(0xFFFFF9E0), // Kuning super lembut / pale warm yellow
-              Colors.white, 
+              Colors.white,
             ],
           ),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 24.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -41,10 +95,10 @@ class WelcomeScreen extends StatelessWidget {
                   'Selamat Datang\nDi Unmul Store',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
-                    color: const Color(0xFF1B1B1B), 
-                    fontWeight: FontWeight.bold, 
+                    color: const Color(0xFF1B1B1B),
+                    fontWeight: FontWeight.bold,
                     fontSize: 24,
-                    height: 1.2
+                    height: 1.2,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -54,14 +108,14 @@ class WelcomeScreen extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     color: const Color(0xFF4B4B4B),
                     fontSize: 14,
-                    height: 1.5
+                    height: 1.5,
                   ),
                 ),
                 const SizedBox(height: 48),
                 PrimaryButton(
                   text: 'Masuk',
                   onPressed: () {
-                    context.push('/home'); // Bypassing login directly to Home as requested
+                    context.push('/login');
                   },
                 ),
                 const SizedBox(height: 16),
@@ -75,16 +129,33 @@ class WelcomeScreen extends StatelessWidget {
                 Text.rich(
                   TextSpan(
                     text: 'By entering my phone number, I accept ',
-                    style: GoogleFonts.poppins(color: const Color(0xFF94A3B8), fontSize: 11),
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: const Color(0xFF94A3B8),
+                    ),
                     children: [
                       TextSpan(
-                        text: "Unmul Store's terms of service\n",
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF1B1B1B)),
+                        text: "Unmul Store's terms\n",
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1B1B1B),
+                        ),
                       ),
-                      TextSpan(text: 'and ', style: GoogleFonts.poppins(color: const Color(0xFF94A3B8))),
                       TextSpan(
-                        text: 'the personal data processing policy.',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF1B1B1B)),
+                        text: 'and ',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: const Color(0xFF94A3B8),
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'personal data.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1B1B1B),
+                        ),
                       ),
                     ],
                   ),

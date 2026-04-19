@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 import '../../../../shared/widgets/social_button.dart';
-import '../widgets/phone_input_field.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -16,12 +16,18 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isButtonEnabled = false;
+  bool _isLoading = false;
+  bool _obscurePassword = true;
 
   void _validateInput() {
     setState(() {
-      _isButtonEnabled = _nameController.text.isNotEmpty && _phoneController.text.length >= 8;
+      _isButtonEnabled =
+          _nameController.text.isNotEmpty &&
+          _emailController.text.isNotEmpty &&
+          _passwordController.text.isNotEmpty;
     });
   }
 
@@ -29,129 +35,266 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void initState() {
     super.initState();
     _nameController.addListener(_validateInput);
-    _phoneController.addListener(_validateInput);
+    _emailController.addListener(_validateInput);
+    _passwordController.addListener(_validateInput);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  void _onRegister() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    final authRepo = AuthRepository();
+    try {
+      await authRepo.signUpWithEmail(
+        _emailController.text,
+        _passwordController.text,
+        _nameController.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Link verifikasi telah dikirim ke email Anda'),
+          ),
+        );
+        context.push(
+          '/verify-pending',
+          extra: {'email': _emailController.text, 'name': _nameController.text},
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMessage = e.toString();
+
+        if (errorMessage.contains('429') ||
+            errorMessage.contains('rate limit')) {
+          errorMessage =
+              'Terlalu banyak permintaan. Silakan tunggu beberapa detik lalu coba lagi, atau coba gunakan email lain.';
+        } else if (errorMessage.contains('already registered') ||
+            errorMessage.contains('already exists')) {
+          errorMessage = 'Email ini sudah terdaftar. Silakan login.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1B1B1B)),
-          onPressed: () => context.pop(),
-        ),
-      ),
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: CustomScrollView(
-            slivers: [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          padding: EdgeInsets.symmetric(
+            horizontal: 24.0,
+          ).copyWith(bottom: bottomPadding > 0 ? 20 : 24, top: 24),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Buat Akunmu',
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF1B1B1B),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Mulai jelajahi dan pesan produk Unmul Store\nsecara online.',
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF4B4B4B),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Nama',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1B1B1B),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                CustomTextField(
+                  controller: _nameController,
+                  hintText: 'Masukin nama lengkap',
+                  prefixIcon: const Icon(
+                    Icons.person,
+                    color: Color(0xFFCBD5E1),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Email',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1B1B1B),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                CustomTextField(
+                  controller: _emailController,
+                  hintText: 'Masukin email',
+                  prefixIcon: const Icon(Icons.email, color: Color(0xFFCBD5E1)),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+
+                const SizedBox(height: 24),
+                Text(
+                  'Password',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1B1B1B),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                CustomTextField(
+                  controller: _passwordController,
+                  hintText: 'Masukin password',
+                  prefixIcon: const Icon(Icons.lock, color: Color(0xFFCBD5E1)),
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                    onPressed: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+                PrimaryButton(
+                  text: 'Lanjutkan',
+                  isDisabled: !_isButtonEnabled,
+                  isLoading: _isLoading,
+                  onPressed: _onRegister,
+                ),
+                const SizedBox(height: 24),
+                Row(
                   children: [
-                    const SizedBox(height: 10),
-                    Text(
-                      'Buat Akunmu',
-                      style: GoogleFonts.poppins(
-                        color: const Color(0xFF1B1B1B), 
-                        fontWeight: FontWeight.bold, 
-                        fontSize: 22
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Mulai jelajahi dan pesan produk Unmul Store\nsecara online.',
-                      style: GoogleFonts.poppins(
-                        color: const Color(0xFF4B4B4B), 
-                        fontSize: 14
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Nama', 
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF1B1B1B), fontSize: 14)
-                    ),
-                    const SizedBox(height: 8),
-                    CustomTextField(
-                      controller: _nameController,
-                      hintText: 'Masukin nama lengkap',
-                      prefixIcon: const Icon(Icons.person, color: Color(0xFFCBD5E1)),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Nomor HP', 
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF1B1B1B), fontSize: 14)
-                    ),
-                    const SizedBox(height: 8),
-                    PhoneInputField(controller: _phoneController),
-                    
-                    const SizedBox(height: 48),
-                    Row(
-                      children: [
-                        const Expanded(child: Divider(color: AppTheme.borderColor)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'Or login with', 
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12, color: const Color(0xFF94A3B8))
-                          ),
+                    const Expanded(child: Divider(color: AppTheme.borderColor)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Or login with',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: const Color(0xFF94A3B8),
                         ),
-                        const Expanded(child: Divider(color: AppTheme.borderColor)),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    SocialButton(
-                      text: 'Continue With Google',
-                      onPressed: () {},
-                    ),
-                    
-                    const Spacer(),
-                    
-                    const SizedBox(height: 48),
-                    PrimaryButton(
-                      text: 'Lanjutkan',
-                      isDisabled: !_isButtonEnabled,
-                      onPressed: () {
-                         context.push('/otp', extra: '+62${_phoneController.text}');
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: Text.rich(
-                        TextSpan(
-                          text: 'By entering my phone number, I accept ',
-                          style: GoogleFonts.poppins(color: const Color(0xFF94A3B8), fontSize: 11),
-                          children: [
-                            TextSpan(
-                              text: "Unmul Store's terms of service\n",
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF1B1B1B)),
-                            ),
-                            TextSpan(text: 'and ', style: GoogleFonts.poppins(color: const Color(0xFF94A3B8))),
-                            TextSpan(
-                              text: 'the personal data processing policy.',
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF1B1B1B)),
-                            ),
-                          ],
-                        ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const Expanded(child: Divider(color: AppTheme.borderColor)),
                   ],
                 ),
-              )
-            ],
+                const SizedBox(height: 24),
+                SocialButton(
+                  text: 'Continue With Google',
+                  onPressed: () async {
+                    try {
+                      final authRepo = AuthRepository();
+                      await authRepo.signInWithGoogle();
+                      if (context.mounted) {
+                        context.go('/home');
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Google Sign-In gagal: $e')),
+                        );
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Sudah Memiliki Akun? ',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => context.push('/login'),
+                        child: Text(
+                          'Masuk',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFFCC00),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Center(
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'By entering my email, I accept ',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                      children: [
+                        TextSpan(
+                          text: "Unmul Store's terms\n",
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1B1B1B),
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'and ',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'personal data.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1B1B1B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

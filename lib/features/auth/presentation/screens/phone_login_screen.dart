@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../../../../shared/widgets/primary_button.dart';
-import '../widgets/phone_input_field.dart';
+import '../../../../shared/widgets/custom_text_field.dart';
+import '../../../../shared/widgets/social_button.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class PhoneLoginScreen extends StatefulWidget {
@@ -12,84 +17,244 @@ class PhoneLoginScreen extends StatefulWidget {
 }
 
 class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _promoController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isButtonEnabled = false;
+  bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
     super.initState();
-    _phoneController.addListener(() {
-      setState(() {
-        _isButtonEnabled = _phoneController.text.length >= 8;
-      });
+    _emailController.addListener(_validateInput);
+    _passwordController.addListener(_validateInput);
+  }
+
+  void _validateInput() {
+    setState(() {
+      _isButtonEnabled =
+          _emailController.text.isNotEmpty &&
+          _passwordController.text.isNotEmpty;
     });
   }
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _promoController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  void _onLogin() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    final authRepo = AuthRepository();
+    try {
+      final response = await authRepo.signInWithEmail(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      if (mounted && response.session != null) {
+        final user = response.user;
+        String? role = user?.userMetadata?['role'] as String?;
+
+        // Cek auth.role jika metadata kosong
+        if ((role == null || role == 'authenticated') && user != null) {
+          if (user.role != null && user.role != 'authenticated') {
+            role = user.role;
+          }
+        }
+
+        // Jika tidak ada di metadata atau auth.role, cek tabel profiles
+        if ((role == null || role == 'authenticated') && user != null) {
+          try {
+            final profileData = await Supabase.instance.client
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            role = profileData['role'] as String?;
+          } catch (e) {
+            debugPrint('Error fetching role: $e');
+          }
+        }
+
+        if (role == 'admin' || role == 'superadmin') {
+          context.go('/admin-dashboard', extra: {'role': role});
+        } else {
+          context.go('/home');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        String message = 'Login gagal';
+        if (e.toString().contains('Email not confirmed')) {
+          message = 'Silakan verifikasi email terlebih dahulu';
+        } else {
+          message = 'Login gagal: $e';
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _onGoogleLogin() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    final authRepo = AuthRepository();
+    try {
+      await authRepo.signInWithGoogle();
+      
+      if (!kIsWeb && mounted) {
+        final user = Supabase.instance.client.auth.currentUser;
+        String? role = user?.userMetadata?['role'] as String?;
+
+        if (role == null && user != null) {
+          try {
+            final profileData = await Supabase.instance.client
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            role = profileData['role'] as String?;
+          } catch (e) {
+            debugPrint('Error fetching role: $e');
+          }
+        }
+
+        if (role == 'admin' || role == 'superadmin') {
+          context.go('/admin-dashboard', extra: {'role': role});
+        } else {
+          context.go('/home');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Google Sign-In gagal: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.textColor),
-          onPressed: () => context.pop(),
-        ),
-      ),
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: EdgeInsets.symmetric(horizontal: 24.0).copyWith(
+            bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 0,
+            top: 16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
               Text(
-                'Masuk menggunakan nomor HP',
-                style: Theme.of(context).textTheme.titleLarge,
+                'Masuk',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF1B1B1B),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Mohon konfirmasi kode negara ponsel Anda\ndan masukkan nomor telepon anda',
-                style: Theme.of(context).textTheme.bodyMedium,
+                'Masukkan email dan password Anda',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF4B4B4B),
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 32),
-              PhoneInputField(controller: _phoneController),
+              CustomTextField(
+                controller: _emailController,
+                hintText: 'Masukkan email',
+                prefixIcon: const Icon(Icons.email, color: Color(0xFFCBD5E1)),
+                keyboardType: TextInputType.emailAddress,
+              ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _promoController,
-                decoration: InputDecoration(
-                  hintText: 'Your promo code (Optional)',
-                  hintStyle: const TextStyle(color: AppTheme.subtitleColor),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppTheme.borderColor),
+              CustomTextField(
+                controller: _passwordController,
+                hintText: 'Masukkan Password',
+                prefixIcon: const Icon(Icons.lock, color: Color(0xFFCBD5E1)),
+                obscureText: _obscurePassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: const Color(0xFF94A3B8),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppTheme.borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppTheme.primaryColor),
-                  ),
+                  onPressed: () {
+                    setState(() => _obscurePassword = !_obscurePassword);
+                  },
                 ),
               ),
               const SizedBox(height: 32),
               PrimaryButton(
                 text: 'Lanjutkan',
                 isDisabled: !_isButtonEnabled,
-                onPressed: () {
-                  context.push('/otp', extra: '+62${_phoneController.text}');
-                },
+                isLoading: _isLoading,
+                onPressed: _onLogin,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  const Expanded(child: Divider(color: AppTheme.borderColor)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Or login with',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+                  const Expanded(child: Divider(color: AppTheme.borderColor)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SocialButton(
+                text: 'Continue With Google',
+                onPressed: _onGoogleLogin,
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Belum Memiliki Akun? ',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.push('/register'),
+                      child: Text(
+                        'Daftar',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFFFCC00),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const Spacer(),
               Padding(
@@ -97,17 +262,34 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                 child: Center(
                   child: Text.rich(
                     TextSpan(
-                      text: 'By entering my phone number, I accept ',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.subtitleColor),
-                      children: const [
+                      text: 'By entering my credentials, I accept ',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                      children: [
                         TextSpan(
-                          text: "Unmul Store's terms of service\n",
-                          style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textColor),
+                          text: "Unmul Store's terms\n",
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1B1B1B),
+                          ),
                         ),
-                        TextSpan(text: 'and '),
                         TextSpan(
-                          text: 'the personal data processing policy.',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textColor),
+                          text: 'and ',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'personal data.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1B1B1B),
+                          ),
                         ),
                       ],
                     ),

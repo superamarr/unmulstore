@@ -16,6 +16,8 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  bool _isRentSelected = false;
+
   // Helper Format Price
   String _formatPrice(int price) {
     var str = price.toString();
@@ -27,6 +29,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return 'Rp $result';
   }
 
+  int get _displayPrice {
+    if (_isRentSelected) {
+      return widget.product.price + widget.product.deposit;
+    }
+    return widget.product.price;
+  }
+
   void _showBottomSheet(BuildContext context, String actionText) {
     showModalBottomSheet(
       context: context,
@@ -35,31 +44,77 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       builder: (context) => ProductActionBottomSheet(
         product: widget.product,
         actionText: actionText,
+        isRental: _isRentSelected,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('DETAIL: View Product ID: ${widget.product.id}');
+    debugPrint('DETAIL: Colors: ${widget.product.colors}');
+    debugPrint('DETAIL: Sizes: ${widget.product.sizes}');
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
           // Content
           SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Product Image Container
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.45,
-                  width: double.infinity,
-                  child: Image.asset(
-                    widget.product.imagePath,
-                    fit: BoxFit.cover,
-                  ),
+                // Product Image Container with Non-Sticky Header
+                Stack(
+                  children: [
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.45,
+                      width: double.infinity,
+                      child: widget.product.imagePath.startsWith('http')
+                        ? Image.network(widget.product.imagePath, fit: BoxFit.cover)
+                        : Image.asset(widget.product.imagePath, fit: BoxFit.cover),
+                    ),
+                    // Header Buttons (Back, Share, Keranjang) - Now part of scrollable content
+                    Positioned(
+                      top: MediaQuery.of(context).padding.top + 16,
+                      left: 0,
+                      right: 0,
+                      child: SvgPicture.asset(
+                        'assets/icons/Header.svg',
+                        height: 60,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    // Clickable areas
+                    Positioned(
+                      top: MediaQuery.of(context).padding.top + 16,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              width: 70,
+                              height: 60,
+                              color: Colors.transparent,
+                            ),
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => context.push('/cart?from=detail'),
+                            child: Container(
+                              width: 70,
+                              height: 60,
+                              color: Colors.transparent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                
+
                 // Product Metadata
                 Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -96,71 +151,233 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
-                      // Warna Selector Preview
-                      Text(
-                        'Warna',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF1B1B1B)),
-                      ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          widget.product.imagePath,
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Ukuran Selector Preview
-                      Text(
-                        'Ukuran',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF1B1B1B)),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: ['S', 'M', 'L', 'XL'].map((size) {
-                          return Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            width: 60,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+
+                      // Beli / Sewa Toggle (Condition: isRentable)
+                      if (widget.product.isRentable) ...[
+                        Container(
+                          height: 54,
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFF8FAFC,
+                            ), // Faded white/light gray
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFE2E8F0),
+                              width: 1,
                             ),
-                            child: Text(size, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: const Color(0xFF1B1B1B))),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // Expandables
-                      const Divider(color: Color(0xFFE2E8F0)),
-                      Theme(
-                        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          title: Text('Panduan Ukuran', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF1B1B1B))),
-                          tilePadding: EdgeInsets.zero,
-                          children: [
-                            Text('Deskripsi ukuran standar mulai dari S hingga XL.', style: GoogleFonts.poppins(color: const Color(0xFF4B4B4B))),
-                          ],
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _isRentSelected = false),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: !_isRentSelected
+                                          ? const Color(0xFFFFCC00)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: !_isRentSelected
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.05,
+                                                ),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Beli',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF1B1B1B),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _isRentSelected = true),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: _isRentSelected
+                                          ? const Color(0xFFFFCC00)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: _isRentSelected
+                                          ? [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.05,
+                                                ),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Sewa',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF1B1B1B),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Divider(color: Color(0xFFE2E8F0)),
-                      Theme(
-                        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          title: Text('Deskripsi', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: const Color(0xFF1B1B1B))),
-                          tilePadding: EdgeInsets.zero,
-                          children: [
-                            Text(widget.product.description, style: GoogleFonts.poppins(color: const Color(0xFF4B4B4B))),
-                          ],
+                        const SizedBox(height: 24),
+                      ],
+                      // Warna Selector Preview
+                      if (widget.product.colors != null && widget.product.colors!.isNotEmpty) ...[
+                        Text(
+                          'Warna',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: const Color(0xFF1B1B1B),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: widget.product.colors!.map((colorName) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Text(
+                                colorName,
+                                style: GoogleFonts.poppins(
+                                  color: const Color(0xFF1B1B1B),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      if (widget.product.sizes != null && widget.product.sizes!.isNotEmpty) ...[
+                        Text(
+                          'Ukuran',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: const Color(0xFF1B1B1B),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: widget.product.sizes!.map((size) {
+                            return Container(
+                              width: 60,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Text(
+                                size,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF1B1B1B),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+
+                      if (widget.product.sizes != null && 
+                          widget.product.sizes!.isNotEmpty && 
+                          widget.product.sizeGuide != null && 
+                          widget.product.sizeGuide!.isNotEmpty) ...[
+                        const Divider(color: Color(0xFFE2E8F0)),
+                        Theme(
+                          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                          child: ExpansionTile(
+                            title: Text(
+                              'Panduan Ukuran',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1B1B1B),
+                              ),
+                            ),
+                            tilePadding: EdgeInsets.zero,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Text(
+                                  widget.product.sizeGuide!,
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF4B4B4B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (widget.product.specifications != null && widget.product.specifications!.isNotEmpty) ...[
+                        const Divider(color: Color(0xFFE2E8F0)),
+                        Theme(
+                          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                          child: ExpansionTile(
+                            title: Text(
+                              'Spesifikasi Produk',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1B1B1B),
+                              ),
+                            ),
+                            tilePadding: EdgeInsets.zero,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Text(
+                                  widget.product.specifications!,
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF4B4B4B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const Divider(color: Color(0xFFE2E8F0)),
                       const SizedBox(height: 100), // spacing for bottom bar
                     ],
@@ -169,21 +386,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
           ),
-          
+
           // Bottom Action Bar
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Container(
-              height: 80,
+              height: 64,
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     spreadRadius: 0,
-                    blurRadius: 10,
+                    blurRadius: 6,
                     offset: const Offset(0, -4),
                   ),
                 ],
@@ -193,12 +410,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Expanded(
                     flex: 1,
                     child: GestureDetector(
-                      onTap: () => _showBottomSheet(context, 'Masukkan Keranjang'),
+                      onTap: () =>
+                          _showBottomSheet(context, 'Masukkan Keranjang'),
                       child: Container(
-                        height: 80,
+                        height: 64,
                         color: const Color(0xFF47413E), // Dark matching design
                         child: Center(
-                          child: SvgPicture.asset('assets/icons/keranjang.svg', width: 24, height: 24),
+                          child: SvgPicture.asset(
+                            'assets/icons/keranjang.svg',
+                            width: 18,
+                            height: 18,
+                          ),
                         ),
                       ),
                     ),
@@ -208,20 +430,29 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     child: GestureDetector(
                       onTap: () => _showBottomSheet(context, 'Beli Sekarang'),
                       child: Container(
-                        height: 80,
+                        height: 64,
                         color: AppTheme.primaryColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center, // Centered text to match image better
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
-                              'TOTAL BAYAR', 
-                              style: GoogleFonts.poppins(color: const Color(0xFF1B1B1B), fontWeight: FontWeight.w600, fontSize: 13, letterSpacing: 1.2)
+                              'TOTAL BAYAR',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF1B1B1B),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10,
+                                letterSpacing: 1.2,
+                              ),
                             ),
                             Text(
-                              _formatPrice(widget.product.price),
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 24, color: const Color(0xFF1B1B1B)),
+                              _formatPrice(_displayPrice),
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: const Color(0xFF1B1B1B),
+                              ),
                             ),
                           ],
                         ),
@@ -230,38 +461,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ],
               ),
-            ),
-          ),
-
-          // Header Floating Buttons (SVG Header) - Placed last to be on very top
-          Positioned(
-            top: MediaQuery.of(context).padding.top,
-            left: 0,
-            right: 0,
-            child: SvgPicture.asset(
-              'assets/icons/Header.svg', 
-              height: 60,
-              fit: BoxFit.cover,
-            ),
-          ),
-          
-          // Transparent clickable areas on top of Header SVG for navigation
-          Positioned(
-            top: MediaQuery.of(context).padding.top,
-            left: 0,
-            right: 0,
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(width: 70, height: 60, color: Colors.transparent),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => context.push('/cart?from=detail'),
-                  child: Container(width: 70, height: 60, color: Colors.transparent),
-                ),
-              ],
             ),
           ),
         ],

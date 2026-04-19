@@ -6,6 +6,7 @@ class PrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isDisabled;
+  final bool isLoading;
   final FontWeight? fontWeight;
   final double? fontSize;
   final Color? textColor;
@@ -16,6 +17,7 @@ class PrimaryButton extends StatelessWidget {
     required this.text,
     this.onPressed,
     this.isDisabled = false,
+    this.isLoading = false,
     this.fontWeight,
     this.fontSize,
     this.textColor,
@@ -29,30 +31,43 @@ class PrimaryButton extends StatelessWidget {
       height: 52,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: isDisabled ? const Color(0xFFE2E8F0) : AppTheme.primaryColor,
-          foregroundColor: isDisabled ? const Color(0xFF8E929A) : (textColor ?? AppTheme.textColor),
+          backgroundColor: isDisabled
+              ? const Color(0xFFE2E8F0)
+              : AppTheme.primaryColor,
+          foregroundColor: isDisabled
+              ? const Color(0xFF8E929A)
+              : (textColor ?? AppTheme.textColor),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12), // Matching design better
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
-        onPressed: isDisabled ? null : onPressed,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (prefixIcon != null) ...[
-              Icon(prefixIcon, size: 20),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              text,
-              style: GoogleFonts.poppins(
-                fontWeight: fontWeight ?? FontWeight.w700, 
-                fontSize: fontSize ?? 16,
+        onPressed: isDisabled || isLoading ? null : onPressed,
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (prefixIcon != null) ...[
+                    Icon(prefixIcon, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    text,
+                    style: GoogleFonts.poppins(
+                      fontWeight: fontWeight ?? FontWeight.w700,
+                      fontSize: fontSize ?? 16,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/theme/app_theme.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final Widget? prefixIcon;
+  final TextInputType? keyboardType;
+  final bool obscureText;
+  final Widget? suffixIcon;
+  final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
     super.key,
     required this.controller,
     required this.hintText,
     this.prefixIcon,
+    this.keyboardType,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.maxLength,
+    this.inputFormatters,
   });
 
   @override
@@ -23,13 +33,28 @@ class CustomTextField extends StatelessWidget {
       ),
       child: TextField(
         controller: controller,
-        style: GoogleFonts.poppins(color: const Color(0xFF1B1B1B), fontSize: 14),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        maxLength: maxLength,
+        inputFormatters: inputFormatters,
+        style: GoogleFonts.poppins(
+          color: const Color(0xFF1B1B1B),
+          fontSize: 14,
+        ),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: GoogleFonts.poppins(color: const Color(0xFF94A3B8), fontSize: 14),
+          hintStyle: GoogleFonts.poppins(
+            color: const Color(0xFF94A3B8),
+            fontSize: 14,
+          ),
+          counterText: '', // Hide default character counter 
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           prefixIcon: prefixIcon,
+          suffixIcon: suffixIcon,
         ),
       ),
     );
