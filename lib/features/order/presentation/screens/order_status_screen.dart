@@ -552,7 +552,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               onPressed: () => _showInputResiBalikDialog(context),
               prefixIcon: Icons.assignment_return_outlined,
             ),
-          ] else ...[
+          ] else if (isLacakButtonVisible(_order!.status, paymentMethod)) ...[
             PrimaryButton(
               text: paymentMethod == 'Bayar di Toko'
                   ? 'Lihat Lokasi'
@@ -560,7 +560,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               fontWeight: FontWeight.w900,
               onPressed: () async {
                 if (paymentMethod == 'Bayar di Toko') {
-                  // Open map location
+                  context.push('/order-status', extra: {'orderId': _order!.id});
                 } else {
                   final uri = Uri.parse(
                     'https://www.posindonesia.co.id/id/tracking',
@@ -598,6 +598,13 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
         ],
       ),
     );
+  }
+
+  bool isLacakButtonVisible(String status, String paymentMethod) {
+    if (paymentMethod == 'Bayar di Toko') {
+      return status == 'Siap Diambil';
+    }
+    return status == 'Dikirim';
   }
 
   void _showInputResiBalikDialog(BuildContext context) {

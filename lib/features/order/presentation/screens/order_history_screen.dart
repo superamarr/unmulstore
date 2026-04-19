@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -451,8 +452,14 @@ class _OrderListContentState extends State<_OrderListContent> {
             children: [
               if (order.status == 'Selesai')
                 _buildActionBtn('Beli Lagi', isPrimary: true, onTap: () {})
-              else
-                _buildActionBtn('Lacak', isPrimary: true, onTap: () {}),
+              else if (_shouldShowLacakButton(order.status, order.paymentMethod))
+                _buildActionBtn(
+                  order.paymentMethod == 'Bayar di Toko'
+                      ? 'Lihat Lokasi'
+                      : 'Lacak',
+                  isPrimary: true,
+                  onTap: () => _handleLacak(context, order),
+                ),
               _buildActionBtn(
                 'Detail',
                 isPrimary: false,
@@ -497,6 +504,24 @@ class _OrderListContentState extends State<_OrderListContent> {
         ),
       ),
     );
+  }
+
+  bool _shouldShowLacakButton(String status, String paymentMethod) {
+    if (paymentMethod == 'Bayar di Toko') {
+      return status == 'Siap Diambil';
+    }
+    return status == 'Dikirim';
+  }
+
+  void _handleLacak(BuildContext context, OrderModel order) async {
+    if (order.paymentMethod == 'Bayar di Toko') {
+      context.push('/order-status', extra: {'orderId': order.id});
+    } else {
+      final uri = Uri.parse('https://www.posindonesia.co.id/id/tracking');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
   }
 }
 
