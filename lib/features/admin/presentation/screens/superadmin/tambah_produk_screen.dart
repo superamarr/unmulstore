@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pab/features/admin/domain/repositories/superadmin_repository.dart';
 import 'package:pab/features/home/data/models/product_model.dart';
 import 'package:pab/core/theme/app_theme.dart';
+import 'package:pab/core/utils/security_utils.dart';
 import 'package:pab/shared/widgets/primary_button.dart';
 import 'package:pab/shared/widgets/custom_text_field.dart';
 import 'package:pab/shared/widgets/confirm_action_sheet.dart';
@@ -97,7 +98,70 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
       return;
     }
 
-    if (!_formKey.currentState!.validate()) {
+    // Validasi field wajib
+    final title = _titleCtrl.text.trim();
+    final description = _descCtrl.text.trim();
+    final priceText = _priceCtrl.text.trim();
+    final stockText = _stockCtrl.text.trim();
+    final maxQtyText = _maxQtyCtrl.text.trim();
+
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nama produk wajib diisi!')));
+      return;
+    }
+
+    if (description.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deskripsi produk wajib diisi!')));
+      return;
+    }
+
+    final price = int.tryParse(priceText);
+    if (price == null || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Harga produk wajib diisi dan harus lebih dari 0!')));
+      return;
+    }
+
+    final stock = int.tryParse(stockText);
+    if (stock == null || stock < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stok produk wajib diisi!')));
+      return;
+    }
+
+    final maxQty = int.tryParse(maxQtyText);
+    if (maxQty == null || maxQty <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maksimal pembelian wajib diisi dan harus lebih dari 0!')));
+      return;
+    }
+
+    // Validasi variasi ukuran dan warna
+    final sizes = _sizesCtrl.text.trim();
+    final colors = _colorsCtrl.text.trim();
+
+    if (sizes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Variasi ukuran wajib diisi! Jika tidak ada ukuran, isi dengan "-"')));
+      return;
+    }
+
+    if (colors.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Variasi warna wajib diisi! Jika tidak ada warna, isi dengan "-"')));
+      return;
+    }
+
+    // Security check - XSS and SQL Injection
+    final validationErrors = SecurityUtils.validateProductInput(
+      title: title,
+      description: description,
+      price: priceText,
+      stock: stockText,
+      maxQty: maxQtyText,
+      sizes: sizes,
+      colors: colors,
+    );
+
+    if (validationErrors.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(validationErrors.first)),
+      );
       return;
     }
 
@@ -141,30 +205,46 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
             .getPublicUrl(path);
       }
 
-      // Parsing tag Lists
+      // Parsing tag Lists dengan sanitasi
       List<String> parseTags(String text) {
         if (text.trim().isEmpty) return [];
-        return text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        return text.split(',')
+            .map((e) => SecurityUtils.preventXSS(e.trim()))
+            .where((e) => e.isNotEmpty)
+            .toList();
       }
+
+      // Sanitasi input sebelum simpan ke database
+      final sanitizedTitle = SecurityUtils.preventXSS(_titleCtrl.text.trim());
+      final sanitizedDesc = SecurityUtils.preventXSS(_descCtrl.text.trim());
+      final sanitizedCategory = _categoryCtrl.text.isEmpty 
+          ? null 
+          : SecurityUtils.preventXSS(_categoryCtrl.text.trim());
+      final sanitizedSpec = _specCtrl.text.isEmpty 
+          ? null 
+          : SecurityUtils.preventXSS(_specCtrl.text.trim());
+      final sanitizedSizeGuide = _sizeGuideCtrl.text.isEmpty 
+          ? null 
+          : SecurityUtils.preventXSS(_sizeGuideCtrl.text.trim());
 
       // Simpan data ke tabel products
       final productData = {
-        'id': widget.product?.id, // ID disertakan untuk update, hilang saat insert by repository logic
-        'title': _titleCtrl.text,
-        'description': _descCtrl.text,
+        'id': widget.product?.id,
+        'title': sanitizedTitle,
+        'description': sanitizedDesc,
         'image_path': imageUrl,
-        'price': int.tryParse(_priceCtrl.text) ?? 0,
-        'stock': int.tryParse(_stockCtrl.text) ?? 0,
-        'max_qty': int.tryParse(_maxQtyCtrl.text) ?? 5,
+        'price': SecurityUtils.parseSafeInt(_priceCtrl.text),
+        'stock': SecurityUtils.parseSafeInt(_stockCtrl.text),
+        'max_qty': SecurityUtils.parseSafeInt(_maxQtyCtrl.text, defaultValue: 5),
         'is_rentable': _isRentable,
-        'category': _categoryCtrl.text.isEmpty ? null : _categoryCtrl.text,
+        'category': sanitizedCategory,
         'colors': parseTags(_colorsCtrl.text),
         'sizes': parseTags(_sizesCtrl.text),
-        'specifications': _specCtrl.text.isEmpty ? null : _specCtrl.text,
-        'size_guide': _sizeGuideCtrl.text.isEmpty ? null : _sizeGuideCtrl.text,
-        'deposit': _isRentable ? (int.tryParse(_depositCtrl.text) ?? 0) : 0,
-        'rental_duration': _isRentable ? (int.tryParse(_rentalDurationCtrl.text) ?? 3) : 0,
-        'late_fee': _isRentable ? (int.tryParse(_lateFeeCtrl.text) ?? 0) : 0,
+        'specifications': sanitizedSpec,
+        'size_guide': sanitizedSizeGuide,
+        'deposit': _isRentable ? SecurityUtils.parseSafeInt(_depositCtrl.text) : 0,
+        'rental_duration': _isRentable ? SecurityUtils.parseSafeInt(_rentalDurationCtrl.text, defaultValue: 3) : 0,
+        'late_fee': _isRentable ? SecurityUtils.parseSafeInt(_lateFeeCtrl.text, defaultValue: 20000) : 0,
       };
       
       // Preserve rating
@@ -189,6 +269,46 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Widget _buildLabel(String text, {required bool required, String? hint}) {
+    return RichText(
+      text: TextSpan(
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          color: const Color(0xFF1B1B1B),
+        ),
+        children: [
+          TextSpan(text: text),
+          if (required)
+            const TextSpan(
+              text: ' *',
+              style: TextStyle(color: Colors.red),
+            )
+          else
+            TextSpan(
+              text: ' (Opsional)',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: Colors.grey,
+              ),
+            ),
+          if (hint != null) ...[
+            const TextSpan(text: '\n'),
+            TextSpan(
+              text: hint,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -283,7 +403,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
 
                   const SizedBox(height: 32),
 
-                  const Text('Nama Produk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  _buildLabel('Nama Produk', required: true),
                   const SizedBox(height: 6),
                   CustomTextField(
                     hintText: 'Contoh: T-Shirt Unmul',
@@ -292,7 +412,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text('Deskripsi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  _buildLabel('Deskripsi', required: true),
                   const SizedBox(height: 6),
                   CustomTextField(
                     hintText: 'Penjelasan detail produk',
@@ -307,7 +427,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Harga (Rp)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            _buildLabel('Harga (Rp)', required: true),
                             const SizedBox(height: 6),
                             CustomTextField(
                               hintText: '100000',
@@ -324,7 +444,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Stok', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            _buildLabel('Stok', required: true),
                             const SizedBox(height: 6),
                             CustomTextField(
                               hintText: '24',
@@ -340,7 +460,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text('Maksimal Pembelian / Sewa per Transaksi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  _buildLabel('Maksimal Pembelian / Sewa per Transaksi', required: true),
                   const SizedBox(height: 6),
                   CustomTextField(
                     hintText: '5',
@@ -351,8 +471,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  // Variasi Dinamis
-                  const Text('Variasi Ukuran (Pisahkan dengan Koma)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  _buildLabel('Variasi Ukuran', required: true, hint: 'Pisahkan dengan Koma'),
                   const SizedBox(height: 6),
                   CustomTextField(
                     hintText: 'Contoh: S,M,L,XL,XXL',
@@ -361,7 +480,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text('Variasi Warna (Pisahkan dengan Koma)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  _buildLabel('Variasi Warna', required: true, hint: 'Pisahkan dengan Koma'),
                   const SizedBox(height: 6),
                   CustomTextField(
                     hintText: 'Contoh: Hitam,Putih,Navy',
@@ -370,7 +489,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text('Spesifikasi Produk (Tampil di Dropdown Bawah)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  _buildLabel('Spesifikasi Produk', required: false, hint: 'Tampil di Dropdown Bawah'),
                   const SizedBox(height: 6),
                   CustomTextField(
                     hintText: 'Bahan, Kualitas sablon, dll',
@@ -379,7 +498,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text('Panduan Ukuran (Opsional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  _buildLabel('Panduan Ukuran', required: false),
                   const SizedBox(height: 6),
                   CustomTextField(
                     hintText: 'S: Lebar 48x68, M: 50x70...',
@@ -388,7 +507,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text('Kategori (Opsional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  _buildLabel('Kategori', required: false),
                   const SizedBox(height: 6),
                   CustomTextField(
                     hintText: 'Contoh: Merchandise',

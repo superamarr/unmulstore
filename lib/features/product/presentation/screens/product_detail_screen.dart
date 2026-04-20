@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../home/data/models/product_model.dart';
 import '../widgets/product_action_bottom_sheet.dart';
@@ -45,6 +47,102 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  void _shareProduct() {
+    debugPrint('Share clicked for product: ${widget.product.id}');
+    final productLink = 'unmulstoree://product/${widget.product.id}';
+    final shareText = '${widget.product.title}\n$productLink';
+    
+    Share.share(
+      shareText,
+      subject: widget.product.title,
+    ).then((_) {
+      debugPrint('Share completed');
+    }).catchError((e) {
+      debugPrint('Share error: $e');
+      if (mounted) {
+        _showShareFallbackDialog(shareText);
+      }
+    });
+  }
+
+  void _showShareFallbackDialog(String text) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Bagikan Produk',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: text));
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Link berhasil disalin!'),
+                          backgroundColor: AppTheme.primaryColor,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.copy,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tekan ikon salin untuk menyalin link',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Tutup',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     debugPrint('DETAIL: View Product ID: ${widget.product.id}');
@@ -78,7 +176,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     fit: BoxFit.cover,
                   ),
                 ),
-                // Clickable areas (Back and Cart only - no Share)
+                // Clickable areas (Back, Share, and Cart)
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 16,
                   left: 0,
@@ -94,6 +192,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                       ),
                       const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          debugPrint('Tapped Share area');
+                          _shareProduct();
+                        },
+                        child: Container(
+                          width: 70,
+                          height: 60,
+                          color: Colors.transparent,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => context.push('/cart?from=detail'),
                         child: Container(
