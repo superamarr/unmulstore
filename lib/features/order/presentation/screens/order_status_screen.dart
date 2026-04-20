@@ -50,6 +50,24 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     return 'Rp${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => "${m[1]}.")}';
   }
 
+  int _currentLateFineTotal(OrderModel order) {
+    final deadline = order.returnDeadline;
+    if (deadline == null) return 0;
+    final now = DateTime.now();
+    if (!now.isAfter(deadline)) return 0;
+    final secondsLate = now.difference(deadline).inSeconds;
+    final daysLate = (secondsLate / Duration.secondsPerDay).ceil();
+    final lateFeePerDay = order.lateFee > 0 ? order.lateFee : 20000;
+    return daysLate * lateFeePerDay;
+  }
+
+  Future<void> _openStoreLocation() async {
+    final uri = Uri.parse('https://share.google/ZJBQhbS8serWOm8Tt');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   int _getStatusIndex(String status) {
     switch (status) {
       case 'Menunggu Verifikasi':
@@ -186,6 +204,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
           item: item,
           deadline: _order!.returnDeadline!,
           lateFeePerDay: _order!.lateFee,
+          onReturnPressed: _openStoreLocation,
         ),
       );
     }).toList();
@@ -451,6 +470,10 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     final productTitle = firstItem?.productTitle ?? 'Produk';
     final productQuantity = firstItem?.quantity ?? 1;
     final variation = firstItem?.variation ?? 'Size: L';
+    final isActiveRental = isRental && _order!.status == 'Dalam Masa Sewa';
+    final currentLateFine = _currentLateFineTotal(_order!);
+    final validatedLateFine = _order!.denda;
+    final lateFineTotal = validatedLateFine > 0 ? validatedLateFine : currentLateFine;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -468,90 +491,119 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: imagePath.startsWith('http')
-                    ? Image.network(
-                        imagePath,
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.cover,
-                      )
-                    : Image.asset(
-                        imagePath,
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.cover,
-                      ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            productTitle,
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              color: Colors.black,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+          if (isActiveRental) ...[
+            _buildDendaRow(validatedLateFine: validatedLateFine),
+            const SizedBox(height: 12),
+            const Divider(color: Color(0xFFE2E8F0)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Pembayaran',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: Colors.black,
+                  ),
+                ),
+                Text(
+                  _formatPrice(_order!.totalPrice + _order!.deposit + lateFineTotal),
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    color: const Color(0xFFFFCC00),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+          if (!isActiveRental) ...[
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: imagePath.startsWith('http')
+                      ? Image.network(
+                          imagePath,
+                          width: 70,
+                          height: 70,
+                          fit: BoxFit.cover,
+                        )
+                      : Image.asset(
+                          imagePath,
+                          width: 70,
+                          height: 70,
+                          fit: BoxFit.cover,
                         ),
-                        if (itemCount > 1)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
                             child: Text(
-                              '+$itemCount items',
+                              productTitle,
                               style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                color: const Color(0xFF64748B),
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: Colors.black,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (itemCount > 1)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '+$itemCount items',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  color: const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                    Text(
-                      '$variation - Qty $productQuantity',
-                      style: GoogleFonts.poppins(
-                        color: const Color(0xFF334155),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatPrice(_order!.totalPrice),
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: Colors.black,
+                      Text(
+                        '$variation - Qty $productQuantity',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF334155),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatPrice(_order!.totalPrice),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20.0),
-            child: _DottedDivider(),
-          ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20.0),
+              child: _DottedDivider(),
+            ),
+          ],
           _buildDetailRow('Metode Pembayaran', paymentMethod),
           const SizedBox(height: 8),
           if (paymentMethod != 'Bayar di Toko' && _order!.shippingCost > 0) ...[
@@ -578,7 +630,10 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             _buildDetailRow('Deposit', _formatPrice(_order!.deposit)),
             const SizedBox(height: 8),
           ],
-          if (isRental) ...[_buildDendaRow(), const SizedBox(height: 8)],
+          if (isRental) ...[
+            _buildDendaRow(validatedLateFine: validatedLateFine),
+            const SizedBox(height: 8),
+          ],
           const Divider(color: Color(0xFFE2E8F0)),
           const SizedBox(height: 8),
           Row(
@@ -594,7 +649,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               ),
               Text(
                 _formatPrice(
-                  _order!.totalPrice + _order!.deposit + _order!.lateFee,
+                  _order!.totalPrice + _order!.deposit + lateFineTotal,
                 ),
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w900,
@@ -605,19 +660,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             ],
           ),
           const SizedBox(height: 24),
-          if (isRental && _order!.status == 'Dalam Masa Sewa') ...[
-            PrimaryButton(
-              text: 'Lihat Lokasi',
-              fontWeight: FontWeight.w900,
-              onPressed: () async {
-                final uri = Uri.parse('https://share.google/ZJBQhbS8serWOm8Tt');
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
-              prefixIcon: Icons.location_on,
-            ),
-          ] else if (isLacakButtonVisible(_order!.status, paymentMethod)) ...[
+          if (isLacakButtonVisible(_order!.status, paymentMethod)) ...[
             PrimaryButton(
               text: paymentMethod == 'Bayar di Toko'
                   ? 'Lihat Lokasi'
@@ -625,12 +668,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               fontWeight: FontWeight.w900,
               onPressed: () async {
                 if (paymentMethod == 'Bayar di Toko') {
-                  final uri = Uri.parse(
-                    'https://share.google/ZJBQhbS8serWOm8Tt',
-                  );
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
+                  await _openStoreLocation();
                 } else {
                   final uri = Uri.parse(
                     'https://www.posindonesia.co.id/id/tracking',
@@ -663,6 +701,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                 ),
               ),
             ),
+          ],
           ],
         ],
       ),
@@ -853,10 +892,17 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
     }
   }
 
-  Widget _buildDendaRow() {
+  Widget _buildDendaRow({required int validatedLateFine}) {
     final now = DateTime.now();
     final isLate =
         _order!.returnDeadline != null && now.isAfter(_order!.returnDeadline!);
+    if (validatedLateFine > 0) {
+      return _buildDetailRow(
+        'Denda Keterlambatan',
+        _formatPrice(validatedLateFine),
+        valueColor: const Color(0xFFEF4444),
+      );
+    }
     if (isLate) {
       final secondsLate = now.difference(_order!.returnDeadline!).inSeconds;
       final daysLate = (secondsLate / Duration.secondsPerDay).ceil();
@@ -939,12 +985,14 @@ class ActiveRentalCard extends StatefulWidget {
   final OrderItemModel item;
   final DateTime deadline;
   final int lateFeePerDay;
+  final VoidCallback onReturnPressed;
 
   const ActiveRentalCard({
     super.key,
     required this.item,
     required this.deadline,
     required this.lateFeePerDay,
+    required this.onReturnPressed,
   });
 
   @override
@@ -1137,6 +1185,13 @@ class _ActiveRentalCardState extends State<ActiveRentalCard> {
                     ],
                   ),
                 ),
+          const SizedBox(height: 16),
+          PrimaryButton(
+            text: 'Kembalikan Product',
+            fontWeight: FontWeight.w900,
+            onPressed: widget.onReturnPressed,
+            prefixIcon: Icons.assignment_return,
+          ),
         ],
       ),
     );

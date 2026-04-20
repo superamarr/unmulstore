@@ -15,6 +15,8 @@ class OrderModel {
   final DateTime? returnDeadline;
   final String? returnResi;
   final int lateFee;
+  /// Total denda yang sudah divalidasi admin (bukan tarif per hari).
+  final int denda;
   final int shippingCost;
   final DateTime createdAt;
   final List<OrderItemModel>? items;
@@ -38,6 +40,7 @@ class OrderModel {
     this.returnDeadline,
     this.returnResi,
     this.lateFee = 0,
+    this.denda = 0,
     this.shippingCost = 0,
     required this.createdAt,
     this.items,
@@ -62,6 +65,7 @@ class OrderModel {
       returnDeadline: map['return_deadline'] != null ? DateTime.parse(map['return_deadline']) : null,
       returnResi: map['return_resi'],
       lateFee: map['late_fee'] ?? 0,
+      denda: (map['denda'] as num?)?.toInt() ?? 0,
       shippingCost: map['shipping_cost'] ?? 0,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'])
@@ -90,6 +94,7 @@ class OrderModel {
       'return_deadline': returnDeadline?.toIso8601String(),
       'return_resi': returnResi,
       'late_fee': lateFee,
+      'denda': denda,
       'shipping_cost': shippingCost,
       if (rejectionReason != null) 'rejection_reason': rejectionReason,
     };

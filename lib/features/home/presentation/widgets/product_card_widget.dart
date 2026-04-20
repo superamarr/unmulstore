@@ -110,18 +110,18 @@ class ProductCardWidget extends StatelessWidget {
                             onTap: () {
                               showModalBottomSheet(
                                 context: context,
+                                isDismissible: true,
+                                enableDrag: true,
                                 isScrollControlled: true,
                                 backgroundColor: Colors.transparent,
+                                barrierColor: Colors.black.withValues(alpha: 0.45),
                                 builder: (context) => Padding(
                                   padding: EdgeInsets.only(
                                     bottom: MediaQuery.viewInsetsOf(context).bottom,
                                   ),
-                                  child: Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: ProductActionBottomSheet(
-                                      product: product,
-                                      actionText: 'Masukkan Keranjang',
-                                    ),
+                                  child: ProductActionBottomSheet(
+                                    product: product,
+                                    actionText: 'Masukkan Keranjang',
                                   ),
                                 ),
                               );

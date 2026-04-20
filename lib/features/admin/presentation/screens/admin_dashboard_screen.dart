@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/confirm_action_sheet.dart';
@@ -22,9 +21,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   DateTime _lastSeenPurchase = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastSeenRental = DateTime.fromMillisecondsSinceEpoch(0);
 
-  static const String _purchaseSeenKey = 'admin_last_seen_purchase_pending_at';
-  static const String _rentalSeenKey = 'admin_last_seen_rental_pending_at';
-
   @override
   void initState() {
     super.initState();
@@ -33,19 +29,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _loadSeenState() async {
-    final prefs = await SharedPreferences.getInstance();
+    final purchaseTs = await _repo.getGlobalPurchaseSeenTimestamp();
+    final rentalTs = await _repo.getGlobalRentalSeenTimestamp();
     if (!mounted) return;
     setState(() {
-      _lastSeenPurchase = _parseSeenTime(prefs.getString(_purchaseSeenKey));
-      _lastSeenRental = _parseSeenTime(prefs.getString(_rentalSeenKey));
+      _lastSeenPurchase = purchaseTs ?? DateTime.fromMillisecondsSinceEpoch(0);
+      _lastSeenRental = rentalTs ?? DateTime.fromMillisecondsSinceEpoch(0);
     });
   }
 
-  DateTime _parseSeenTime(String? raw) {
-    if (raw == null || raw.isEmpty) {
-      return DateTime.fromMillisecondsSinceEpoch(0);
-    }
-    return DateTime.tryParse(raw) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  Future<void> _markPurchaseSeen() async {
+    await _repo.markPurchasePendingSeen();
+    await _loadSeenState();
+  }
+
+  Future<void> _markRentalSeen() async {
+    await _repo.markRentalPendingSeen();
+    await _loadSeenState();
   }
 
   @override
@@ -53,7 +53,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _repo.watchOrdersRealtime(),
+        stream: _repo.watchOrdersRealtimeWithPolling(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -80,6 +80,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             isRental: true,
             lastSeen: _lastSeenRental,
           );
+          // UX request: indikator cukup "1" / titik merah, tidak perlu angka besar.
+          final indicatorPurchase = pendingPurchase > 0 ? 1 : 0;
+          final indicatorRental = pendingRental > 0 ? 1 : 0;
 
           return SafeArea(
             child: CustomScrollView(
@@ -238,10 +241,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           title: 'Kelola Pembelian',
                           subtitle: 'Status pembelian & pembayaran',
                           color: Colors.blue,
-                          notificationCount: pendingPurchase,
+                          notificationCount: indicatorPurchase,
                           onTap: () async {
+                            await _markPurchaseSeen();
                             await context.push('/admin-pesanan');
-                            _loadSeenState();
                           },
                         ),
                         _buildProfessionalMenu(
@@ -249,10 +252,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           title: 'Kelola Penyewaan',
                           subtitle: 'Logistik peminjaman produk',
                           color: Colors.orange,
-                          notificationCount: pendingRental,
+                          notificationCount: indicatorRental,
                           onTap: () async {
+                            await _markRentalSeen();
                             await context.push('/admin-penyewaan');
-                            _loadSeenState();
                           },
                         ),
                         _buildProfessionalMenu(
@@ -440,45 +443,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(icon, color: color, size: 22),
-                    ),
-                    if (notificationCount > 0)
-                      Positioned(
-                        right: -4,
-                        top: -4,
-                        child: Container(
-                          constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            notificationCount > 9 ? '9+' : '$notificationCount',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: color, size: 22),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -503,6 +475,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ],
                   ),
                 ),
+                if (notificationCount > 0)
+                  Container(
+                    width: 10,
+                    height: 10,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
                   color: Color(0xFFCBD5E1),

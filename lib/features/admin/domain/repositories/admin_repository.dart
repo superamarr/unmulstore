@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/admin_model.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 
 class AdminRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -125,6 +126,49 @@ class AdminRepository {
         .stream(primaryKey: ['id'])
         .order('created_at', ascending: false)
         .map((rows) => rows.map((e) => Map<String, dynamic>.from(e)).toList());
+  }
+
+  /// Stream orders yang mencoba realtime, tapi punya fallback polling.
+  /// Ini membantu kalau Realtime belum aktif di proyek Supabase.
+  Stream<List<Map<String, dynamic>>> watchOrdersRealtimeWithPolling({
+    Duration pollingInterval = const Duration(seconds: 15),
+  }) {
+    late final StreamController<List<Map<String, dynamic>>> controller;
+    StreamSubscription<List<Map<String, dynamic>>>? realtimeSub;
+    Timer? timer;
+
+    Future<void> emitFetch() async {
+      try {
+        final rows = await _supabase
+            .from('orders')
+            .select()
+            .order('created_at', ascending: false);
+        final list = (rows as List<dynamic>)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        if (!controller.isClosed) controller.add(list);
+      } catch (e) {
+        if (!controller.isClosed) controller.addError(e);
+      }
+    }
+
+    controller = StreamController<List<Map<String, dynamic>>>.broadcast(
+      onListen: () async {
+        await emitFetch();
+        realtimeSub = watchOrdersRealtime().listen(
+          (data) => controller.add(data),
+          onError: (e, st) => controller.addError(e, st),
+        );
+        timer = Timer.periodic(pollingInterval, (_) => emitFetch());
+      },
+      onCancel: () async {
+        await realtimeSub?.cancel();
+        timer?.cancel();
+        await controller.close();
+      },
+    );
+
+    return controller.stream;
   }
 
   Future<void> updateStatusPesanan(String orderId, String status) async {
@@ -370,5 +414,59 @@ class AdminRepository {
       {'label': 'Pesanan Aktif', 'value': pesananAktif.length},
       {'label': 'Pesanan Ditolak', 'value': pesananBatal.length},
     ];
+  }
+
+  Future<void> markPurchasePendingSeen() async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    try {
+      final orders = await _supabase.from('orders').select('id').eq('status', 'Menunggu Verifikasi').eq('is_rental', false);
+      if (orders.isNotEmpty) {
+        for (final order in orders) {
+          await _supabase.from('orders').update({'purchase_pending_seen_at': now}).eq('id', order['id']);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error marking purchase seen: $e');
+    }
+  }
+
+  Future<void> markRentalPendingSeen() async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    try {
+      final orders = await _supabase.from('orders').select('id').eq('status', 'Menunggu Verifikasi').eq('is_rental', true);
+      if (orders.isNotEmpty) {
+        for (final order in orders) {
+          await _supabase.from('orders').update({'rental_pending_seen_at': now}).eq('id', order['id']);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error marking rental seen: $e');
+    }
+  }
+
+  Future<DateTime?> getGlobalPurchaseSeenTimestamp() async {
+    final result = await _supabase
+        .from('orders')
+        .select('purchase_pending_seen_at')
+        .not('purchase_pending_seen_at', 'is', null)
+        .order('purchase_pending_seen_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    if (result == null) return null;
+    final ts = result['purchase_pending_seen_at'];
+    return ts != null ? DateTime.tryParse(ts.toString()) : null;
+  }
+
+  Future<DateTime?> getGlobalRentalSeenTimestamp() async {
+    final result = await _supabase
+        .from('orders')
+        .select('rental_pending_seen_at')
+        .not('rental_pending_seen_at', 'is', null)
+        .order('rental_pending_seen_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    if (result == null) return null;
+    final ts = result['rental_pending_seen_at'];
+    return ts != null ? DateTime.tryParse(ts.toString()) : null;
   }
 }

@@ -178,6 +178,21 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                               },
                             ),
                           ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: () => context.push('/forgot-password'),
+                              child: Text(
+                                'Lupa kata sandi?',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFFFCC00),
+                                ),
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 32),
                           PrimaryButton(
                             text: 'Lanjutkan',

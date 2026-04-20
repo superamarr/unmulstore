@@ -723,27 +723,25 @@ class _KelolaPenyewaanScreenState extends State<KelolaPenyewaanScreen> {
   }
 
   Color _getStatusColor(String status) {
+    const pendingColor = Color(0xFFFFCC00);
+    const completedColor = Color(0xFF10B981);
+    const rejectedColor = Color(0xFFEF4444);
+
     switch (status) {
       case 'Menunggu Verifikasi':
-        return Colors.orange;
       case 'Disetujui':
-        return Colors.blue;
-      case 'Dikemas':
-        return Colors.purple;
+      case 'DiKemas':
       case 'Siap Diambil':
-        return Colors.indigo;
       case 'Dalam Masa Sewa':
-        return Colors.blueAccent;
       case 'Dikembalikan':
-        return Colors.teal;
-      case 'Diterima':
-        return Colors.green;
+      case 'Terlambat':
+        return pendingColor;
       case 'Selesai':
-        return Colors.green;
+      case 'Diterima':
+        return completedColor;
       case 'Dibatalkan':
-        return Colors.red;
       case 'Ditolak':
-        return Colors.red;
+        return rejectedColor;
       default:
         return Colors.grey;
     }

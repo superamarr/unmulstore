@@ -30,18 +30,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _showBottomSheet(BuildContext context, String actionText) {
     showModalBottomSheet(
       context: context,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: ProductActionBottomSheet(
-            product: widget.product,
-            actionText: actionText,
-          ),
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: ProductActionBottomSheet(
+          product: widget.product,
+          actionText: actionText,
         ),
       ),
     );
@@ -80,7 +78,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     fit: BoxFit.cover,
                   ),
                 ),
-                // Clickable areas
+                // Clickable areas (Back and Cart only - no Share)
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 16,
                   left: 0,

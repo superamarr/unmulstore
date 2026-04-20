@@ -177,27 +177,37 @@ class _HomeScreenState extends State<HomeScreen> {
                         // 2. Search Bar
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                          child: Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F5),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: TextField(
-                              decoration: InputDecoration(
-                                hintText: 'Cari Produk',
-                                hintStyle: GoogleFonts.poppins(
-                                  color: AppTheme.subtitleColor,
-                                  fontSize: 13,
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: 'Cari Produk',
+                              hintStyle: GoogleFonts.poppins(
+                                color: const Color(0xFF64748B).withValues(
+                                  alpha: 0.55,
                                 ),
-                                prefixIcon: const Icon(
-                                  Icons.search,
-                                  color: AppTheme.textColor,
-                                  size: 20,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: AppTheme.textColor,
+                                size: 20,
+                              ),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 10,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppTheme.borderColor,
                                 ),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 10,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppTheme.primaryColor,
+                                  width: 1.5,
                                 ),
                               ),
                             ),

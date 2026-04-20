@@ -115,33 +115,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 420),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const Spacer(),
-                          Text(
-                            'Buat Akunmu',
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF1B1B1B),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22,
+                          Center(
+                            child: Text(
+                              'Buat Akunmu',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF1B1B1B),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 22,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            'Mulai jelajahi dan pesan produk Unmul Store secara online.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF4B4B4B),
-                              fontSize: 14,
+                          Center(
+                            child: Text(
+                              'Mulai jelajahi dan pesan produk Unmul Store secara online.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF4B4B4B),
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 32),
-                          Text(
-                            'Nama',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1B1B1B),
-                              fontSize: 14,
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Nama',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1B1B1B),
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -154,12 +161,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          Text(
-                            'Email',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1B1B1B),
-                              fontSize: 14,
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Email',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1B1B1B),
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -173,12 +183,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             keyboardType: TextInputType.emailAddress,
                           ),
                           const SizedBox(height: 24),
-                          Text(
-                            'Password',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1B1B1B),
-                              fontSize: 14,
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Password',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1B1B1B),
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -212,28 +225,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onPressed: _onRegister,
                           ),
                           const SizedBox(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Sudah Memiliki Akun? ',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  color: const Color(0xFF64748B),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => context.push('/login'),
-                                child: Text(
-                                  'Masuk',
+                          Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Sudah Memiliki Akun? ',
                                   style: GoogleFonts.poppins(
                                     fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFFFFCC00),
+                                    color: const Color(0xFF64748B),
                                   ),
                                 ),
-                              ),
-                            ],
+                                GestureDetector(
+                                  onTap: () => context.push('/login'),
+                                  child: Text(
+                                    'Masuk',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFFFFCC00),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           const Spacer(),
                           Text.rich(

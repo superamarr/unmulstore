@@ -6,6 +6,8 @@ import '../../features/auth/presentation/screens/phone_login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/otp_screen.dart';
 import '../../features/auth/presentation/screens/verify_pending_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/reset_password_screen.dart';
 import '../../features/home/presentation/screens/main_layout_screen.dart';
 import '../../features/product/presentation/screens/product_detail_screen.dart';
 import '../../features/home/data/models/product_model.dart';
@@ -79,6 +81,14 @@ class AppRouter {
       GoRoute(
         path: '/login',
         builder: (context, state) => const PhoneLoginScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => const ResetPasswordScreen(),
       ),
       GoRoute(
         path: '/product-detail',

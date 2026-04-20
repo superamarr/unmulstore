@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:async';
 import 'core/bootstrap/configure_url_strategy.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -19,8 +20,45 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final StreamSubscription<AuthState> _authSub;
+  bool _handledRecoveryRedirect = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedOut) {
+        _handledRecoveryRedirect = false;
+        return;
+      }
+
+      if (data.event != AuthChangeEvent.passwordRecovery) return;
+      if (_handledRecoveryRedirect) return;
+      _handledRecoveryRedirect = true;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final currentPath =
+            AppRouter.router.routeInformationProvider.value.uri.path;
+        if (currentPath != '/reset-password') {
+          AppRouter.router.go('/reset-password');
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +70,9 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         final content = child ?? const SizedBox.shrink();
         return MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.noScaling),
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
           child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(
-              context,
-            ).copyWith(scrollbars: false),
+            behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
             child: content,
           ),
         );
