@@ -190,7 +190,7 @@ class AdminRepository {
   Future<void> setDikembalikan(String orderId) async {
     await _supabase
         .from('orders')
-        .update({'status': 'Dikembalikan'})
+        .update({'status': 'Selesai'})
         .eq('id', orderId);
   }
 
@@ -246,7 +246,7 @@ class AdminRepository {
     await _supabase
         .from('orders')
         .update({
-          'status': 'Dikembalikan',
+          'status': 'Selesai',
           'return_date': DateTime.now().toIso8601String(),
         })
         .eq('id', orderId);

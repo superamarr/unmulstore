@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/product_model.dart';
 import '../../domain/repositories/product_repository.dart';
@@ -58,145 +59,166 @@ class _HomeScreenState extends State<HomeScreen> {
             return CustomScrollView(
               physics: const ClampingScrollPhysics(),
               slivers: [
-                // Custom App Bar
+                // Combined White Background Container with Rounded Bottom
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(8),
+                        bottomRight: Radius.circular(8),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Bunga Logo (Top Left)
-                        SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: SvgPicture.asset(
-                            'assets/icons/logo.svg',
-                            fit: BoxFit.contain,
-                            // Enforcement color for visibility
-                            colorFilter: const ColorFilter.mode(
-                              AppTheme.primaryColor,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                        ),
-
-                        // Lokasi Title (Centered)
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                        // Custom App Bar
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Text(
-                                'Lokasi Store',
-                                style: GoogleFonts.poppins(
-                                  color: AppTheme.subtitleColor,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
+                              // Bunga Logo (Top Left)
+                              SizedBox(
+                                width: 32,
+                                height: 32,
+                                child: SvgPicture.asset(
+                                  'assets/icons/logo.svg',
+                                  fit: BoxFit.contain,
+                                  colorFilter: const ColorFilter.mode(
+                                    AppTheme.primaryColor,
+                                    BlendMode.srcIn,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.location_on,
-                                    color: Colors.red,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Universitas Mulawarman',
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.textColor,
-                                      fontSize: 14,
+
+                              // Lokasi Title (Centered)
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Lokasi Store',
+                                      style: GoogleFonts.poppins(
+                                        color: AppTheme.subtitleColor,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.location_on,
+                                          color: Colors.red,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            final uri = Uri.parse(
+                                                'https://share.google/ZJBQhbS8serWOm8Tt');
+                                            if (await canLaunchUrl(uri)) {
+                                              await launchUrl(uri,
+                                                  mode:
+                                                      LaunchMode.externalApplication);
+                                            }
+                                          },
+                                          child: Text(
+                                            'Universitas Mulawarman',
+                                            style: GoogleFonts.poppins(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.textColor,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Notifikasi (Logo Unmul)
+                              SizedBox(
+                                width: 32,
+                                height: 32,
+                                child: Image.asset(
+                                  'icons/Universitas-Mulawarman.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.school,
+                                      color: AppTheme.textColor,
+                                      size: 20,
+                                    );
+                                  },
+                                ),
                               ),
                             ],
                           ),
                         ),
 
-                        // Notifikasi (Bell inside rounded grey box)
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.notifications,
-                            color: AppTheme.textColor,
-                            size: 20,
+                        // 1. Promo Banner (admin, max 3 — carousel jika > 1)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                          child: FutureBuilder<List<String>>(
+                            future: _bannerRepository.fetchBannerUrls(),
+                            builder: (context, snap) {
+                              return HomePromoCarousel(
+                                imageUrls: snap.data ?? const [],
+                              );
+                            },
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
 
-                // 1. Promo Banner (admin, max 3 — carousel jika > 1)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                    child: FutureBuilder<List<String>>(
-                      future: _bannerRepository.fetchBannerUrls(),
-                      builder: (context, snap) {
-                        return HomePromoCarousel(
-                          imageUrls: snap.data ?? const [],
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // 2. Search Bar
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Cari Produk',
-                          hintStyle: GoogleFonts.poppins(
-                            color: AppTheme.subtitleColor,
-                            fontSize: 13,
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.search,
-                            color: AppTheme.textColor,
-                            size: 20,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 10,
+                        // 2. Search Bar
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                          child: Container(
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: TextField(
+                              decoration: InputDecoration(
+                                hintText: 'Cari Produk',
+                                hintStyle: GoogleFonts.poppins(
+                                  color: AppTheme.subtitleColor,
+                                  fontSize: 13,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: AppTheme.textColor,
+                                  size: 20,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
 
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                        const SizedBox(height: 16),
 
-                // 3. Category Chips
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: Row(
-                      children: [
-                        _buildCategoryChip('Semua'),
-                        const SizedBox(width: 10),
-                        _buildCategoryChip('Beli'),
-                        const SizedBox(width: 10),
-                        _buildCategoryChip('Sewa'),
+                        // 3. Category Chips
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          child: Row(
+                            children: [
+                              _buildCategoryChip('Semua'),
+                              const SizedBox(width: 10),
+                              _buildCategoryChip('Beli'),
+                              const SizedBox(width: 10),
+                              _buildCategoryChip('Sewa'),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),

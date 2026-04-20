@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/product_model.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../product/presentation/widgets/product_action_bottom_sheet.dart';
 
 class ProductCardWidget extends StatelessWidget {
   final ProductModel product;
@@ -29,28 +32,49 @@ class ProductCardWidget extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                child: Image.asset(
-                  product.imagePath,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: AppTheme.borderColor,
-                    width: double.infinity,
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      color: AppTheme.subtitleColor,
-                    ),
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: product.imagePath.startsWith('http')
+                      ? Image.network(
+                          product.imagePath,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            color: AppTheme.borderColor,
+                            width: double.infinity,
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              color: AppTheme.subtitleColor,
+                            ),
+                          ),
+                        )
+                      : Image.asset(
+                          product.imagePath,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            color: AppTheme.borderColor,
+                            width: double.infinity,
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              color: AppTheme.subtitleColor,
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -74,23 +98,46 @@ class ProductCardWidget extends StatelessWidget {
                     children: [
                       Text(
                         _formatPrice(product.price),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        style: GoogleFonts.poppins(
                           color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
                         ),
                       ),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.star,
-                            color: AppTheme.primaryColor,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            product.rating.toString(),
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppTheme.subtitleColor),
+                          GestureDetector(
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: MediaQuery.viewInsetsOf(context).bottom,
+                                  ),
+                                  child: Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: ProductActionBottomSheet(
+                                      product: product,
+                                      actionText: 'Masukkan Keranjang',
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              child: SvgPicture.asset(
+                                'assets/icons/keranjang.svg',
+                                colorFilter: const ColorFilter.mode(
+                                  AppTheme.primaryColor,
+                                  BlendMode.srcIn,
+                                ),
+                                height: 18,
+                                width: 18,
+                              ),
+                            ),
                           ),
                         ],
                       ),

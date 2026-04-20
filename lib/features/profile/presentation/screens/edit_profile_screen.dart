@@ -37,10 +37,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _loadProfile() async {
     final profile = await _repo.getCurrentProfile();
     if (profile != null) {
+      final phoneNumber = profile.phoneNumber ?? '';
+      final phoneWithoutPrefix = phoneNumber.startsWith('+62') 
+          ? phoneNumber.substring(3) 
+          : phoneNumber;
       setState(() {
         _profile = profile;
         _nameController.text = profile.fullName ?? '';
-        _phoneController.text = profile.phoneNumber ?? '';
+        _phoneController.text = phoneWithoutPrefix;
         _selectedCity = profile.city;
         _addressController.text = profile.street ?? '';
         _isLoading = false;
@@ -51,12 +55,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   String? _validateFields() {
-    if (_nameController.text.trim().isEmpty) {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
       return 'Nama lengkap wajib diisi.';
     }
-    if (_phoneController.text.trim().isEmpty) {
-      return 'Nomor telepon wajib diisi.';
+    if (name.length > 100) {
+      return 'Nama maksimal 100 karakter.';
     }
+
+    var phone = _phoneController.text.trim();
+    if (phone.isEmpty) {
+      return 'Nomor HP wajib diisi.';
+    }
+    if (phone.length < 12) {
+      return 'Nomor HP minimal 12 digit.';
+    }
+    if (phone.length > 12) {
+      return 'Nomor HP maksimal 12 digit.';
+    }
+
+    final address = _addressController.text.trim();
+    if (address.length > 300) {
+      return 'Alamat maksimal 300 karakter.';
+    }
+
     if (_selectedCity == null || _selectedCity!.isEmpty) {
       return 'Kota/kabupaten wajib dipilih.';
     }
@@ -93,16 +115,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     final profileId = _profile?.id ?? userId;
+    final phoneNumber = '+62${_phoneController.text.trim()}';
     final updatedProfile = ProfileModel(
       id: profileId,
       fullName: _nameController.text.trim(),
-      phoneNumber: _phoneController.text.trim(),
+      phoneNumber: phoneNumber,
       city: _selectedCity,
       street: _addressController.text.trim(),
       avatarUrl: _profile?.avatarUrl,
     );
     await _repo.updateProfile(updatedProfile);
-    if (mounted) context.pop();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile berhasil diperbarui.')),
+      );
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      context.go('/home?t=$timestamp');
+    }
   }
 
   Future<void> _changeProfilePhoto() async {
@@ -162,10 +191,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  @override
+@override
   void dispose() {
-    _nameController.dispose();
     _phoneController.dispose();
+    _nameController.dispose();
     _addressController.dispose();
     super.dispose();
   }
@@ -291,10 +320,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             const SizedBox(height: 24),
             _buildFieldLabel('Nama Lengkap'),
-            _buildTextField(controller: _nameController),
+            _buildTextField(
+              controller: _nameController,
+              maxLength: 100,
+            ),
             const SizedBox(height: 24),
             _buildFieldLabel('Nomor HP'),
-            _buildTextField(controller: _phoneController),
+            _buildTextField(
+              controller: _phoneController,
+              maxLength: 12,
+              keyboardType: TextInputType.phone,
+              hintText: '812345678901',
+            ),
             const SizedBox(height: 24),
             _buildFieldLabel('Kota / Kabupaten'),
             _buildCityDropdown(),
@@ -303,6 +340,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _buildTextField(
               controller: _addressController,
               maxLines: 4,
+              maxLength: 300,
               hintText: 'Nama jalan, RT/RW, kode pos, dll',
             ),
           ],
@@ -349,10 +387,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required TextEditingController controller,
     int maxLines = 1,
     String? hintText,
+    int? maxLength,
+    TextInputType? keyboardType,
+    String? prefixText,
   }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
+      maxLength: maxLength,
+      keyboardType: keyboardType,
       style: GoogleFonts.poppins(
         fontSize: 14,
         color: const Color(0xFF1B1B1B),
@@ -360,12 +403,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
       decoration: InputDecoration(
         hintText: hintText,
+        prefixText: prefixText,
+        prefixStyle: GoogleFonts.poppins(
+          fontSize: 14,
+          color: const Color(0xFF1B1B1B),
+          fontWeight: FontWeight.w500,
+        ),
         hintStyle: GoogleFonts.poppins(
           color: const Color(0xFF64748B).withValues(alpha: 0.5),
         ),
         filled: true,
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.all(16),
+        counterStyle: GoogleFonts.poppins(
+          fontSize: 12,
+          color: const Color(0xFF64748B),
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFE2E8F0)),

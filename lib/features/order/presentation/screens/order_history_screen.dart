@@ -20,7 +20,7 @@ class OrderHistoryScreen extends StatefulWidget {
     this.onBack,
     this.initialTab = 0,
     this.showBackButton = false,
-  });
+});
 
   @override
   State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
@@ -28,6 +28,44 @@ class OrderHistoryScreen extends StatefulWidget {
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   String _selectedFilter = 'Semua';
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Menunggu Verifikasi':
+      case 'DiKemas':
+        return const Color(0xFFFEF3C7);
+      case 'Dalam Masa Sewa':
+      case 'Siap Diambil':
+        return const Color(0xFFDBEAFE);
+      case 'Diterima':
+      case 'Selesai':
+        return const Color(0xFFD1FAE5);
+      case 'Ditolak':
+      case 'Dibatalkan':
+        return const Color(0xFFFEE2E2);
+      default:
+        return const Color(0xFFE2E8F0);
+    }
+  }
+
+  Color _getStatusTextColor(String status) {
+    switch (status) {
+      case 'Menunggu Verifikasi':
+      case 'DiKemas':
+        return const Color(0xFFD97706);
+      case 'Dalam Masa Sewa':
+      case 'Siap Diambil':
+        return const Color(0xFF2563EB);
+      case 'Diterima':
+      case 'Selesai':
+        return const Color(0xFF059669);
+      case 'Ditolak':
+      case 'Dibatalkan':
+        return const Color(0xFFDC2626);
+      default:
+        return const Color(0xFF64748B);
+    }
+  }
 
   final List<String> _filters = [
     'Semua',
@@ -102,18 +140,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               ],
             ),
           ),
-        ),
+),
         body: TabBarView(
           children: [
             _OrderListContent(
               key: ValueKey('order-list-0-$_selectedFilter'),
               isRental: false,
               selectedFilter: _selectedFilter,
+              statusColor: _getStatusColor,
+              statusTextColor: _getStatusTextColor,
             ),
             _OrderListContent(
               key: ValueKey('order-list-1-$_selectedFilter'),
               isRental: true,
               selectedFilter: _selectedFilter,
+              statusColor: _getStatusColor,
+              statusTextColor: _getStatusTextColor,
             ),
           ],
         ),
@@ -174,11 +216,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
 class _OrderListContent extends StatefulWidget {
   final bool isRental;
   final String selectedFilter;
+  final Color Function(String)? statusColor;
+  final Color Function(String)? statusTextColor;
 
   const _OrderListContent({
     required Key key,
     required this.isRental,
     required this.selectedFilter,
+    this.statusColor,
+    this.statusTextColor,
   }) : super(key: key);
 
   @override
@@ -316,6 +362,13 @@ class _OrderListContentState extends State<_OrderListContent> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFCBD5E1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,21 +401,13 @@ class _OrderListContentState extends State<_OrderListContent> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: order.status == 'Selesai'
-                      ? const Color(0xFFD1FAE5)
-                      : order.status == 'Ditolak'
-                          ? const Color(0xFFFEE2E2)
-                          : const Color(0xFFDBEAFE),
+                  color: widget.statusColor?.call(order.status) ?? const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   order.status,
                   style: GoogleFonts.poppins(
-                    color: order.status == 'Selesai'
-                        ? const Color(0xFF10B981)
-                        : order.status == 'Ditolak'
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFF3B82F6),
+                    color: widget.statusTextColor?.call(order.status) ?? const Color(0xFF64748B),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -555,7 +600,10 @@ class _OrderListContentState extends State<_OrderListContent> {
 
   void _handleLacak(BuildContext context, OrderModel order) async {
     if (order.paymentMethod == 'Bayar di Toko') {
-      context.push('/order-status', extra: {'orderId': order.id});
+      final uri = Uri.parse('https://share.google/ZJBQhbS8serWOm8Tt');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
     } else {
       final uri = Uri.parse('https://www.posindonesia.co.id/id/tracking');
       if (await canLaunchUrl(uri)) {

@@ -40,8 +40,6 @@ class _KelolaPenyewaanScreenState extends State<KelolaPenyewaanScreen> {
     'DiKemas',
     'Siap Diambil',
     'Dalam Masa Sewa',
-    'Dikembalikan',
-    'Diterima',
     'Selesai',
     'Dibatalkan',
   ];
@@ -131,10 +129,8 @@ class _KelolaPenyewaanScreenState extends State<KelolaPenyewaanScreen> {
         await _repo.updateStatusPesanan(orderId, 'Dibatalkan');
       } else if (status == 'Dalam Masa Sewa') {
         await _repo.mulaiSewa(orderId);
-      } else if (status == 'Dikembalikan') {
-        await _repo.konfirmasiDikembalikan(orderId);
       } else if (status == 'Selesai') {
-        await _repo.setSelesaiSewa(orderId);
+        await _repo.konfirmasiDikembalikan(orderId);
       } else if (currentStatus == 'Menunggu Verifikasi' && status == 'Ditolak') {
         final r = (rejectionReason ?? '').trim();
         if (r.length < 10) {
@@ -317,13 +313,13 @@ class _KelolaPenyewaanScreenState extends State<KelolaPenyewaanScreen> {
       case 'Siap Diambil':
         return {'next': 'Dalam Masa Sewa', 'label': 'Mulai Sewa'};
       case 'Dalam Masa Sewa':
-        return {'next': 'Dikembalikan', 'label': 'Konfirmasi Kembali'};
-      case 'Dikembalikan':
-        return {'next': 'Selesai', 'label': 'Selesaikan Sewa'};
+        return {'next': 'Selesai', 'label': 'Konfirmasi Kembali'};
+      case 'Selesai':
+        return null;
       case 'Diterima':
         return {'next': 'Selesai', 'label': 'Selesaikan Sewa'};
       case 'Terlambat':
-        return {'next': 'Dikembalikan', 'label': 'Konfirmasi Kembali'};
+        return {'next': 'Selesai', 'label': 'Konfirmasi Kembali'};
       case 'Dibatalkan':
         return null;
       default:

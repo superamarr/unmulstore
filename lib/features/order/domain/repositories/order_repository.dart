@@ -217,21 +217,7 @@ class OrderRepository {
           })
           .eq('id', orderId);
     } catch (e) {
-      throw Exception('Failed to mark as delivered: $e');
-    }
-  }
-
-  Future<void> submitReturnResi(String orderId, String resi) async {
-    try {
-      await _supabase
-          .from('orders')
-          .update({
-            'status': 'Dikirim Balik',
-            'return_resi': resi,
-          })
-          .eq('id', orderId);
-    } catch (e) {
-      throw Exception('Failed to submit return resi: $e');
+throw Exception('Failed to mark as delivered: $e');
     }
   }
 

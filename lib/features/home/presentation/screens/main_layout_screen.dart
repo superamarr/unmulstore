@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -20,9 +19,9 @@ class MainLayoutScreen extends StatefulWidget {
 
 class NavItem {
   final String label;
-  final String svgPath;
+  final IconData icon;
 
-  NavItem({required this.label, required this.svgPath});
+  NavItem({required this.label, required this.icon});
 }
 
 class _MainLayoutScreenState extends State<MainLayoutScreen> {
@@ -76,15 +75,16 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
   ];
 
   final List<NavItem> _navItems = [
-    NavItem(label: 'Beranda', svgPath: 'assets/icons/ikonhome.svg'),
-    NavItem(label: 'Keranjang', svgPath: 'assets/icons/keranjang.svg'),
-    NavItem(label: 'Pesanan', svgPath: 'assets/icons/ikonpesan.svg'),
-    NavItem(label: 'Saya', svgPath: 'assets/icons/User.svg'),
+    NavItem(label: 'Beranda', icon: Icons.home),
+    NavItem(label: 'Keranjang', icon: Icons.shopping_cart),
+    NavItem(label: 'Pesanan', icon: Icons.receipt_long),
+    NavItem(label: 'Saya', icon: Icons.person),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           // Screen layer
@@ -112,15 +112,15 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
                   height: 64,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: Colors.white.withOpacity(0.3),
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
+                        color: Colors.black.withOpacity(0.1),
                         spreadRadius: 0,
                         blurRadius: 20,
                         offset: const Offset(0, 10),
@@ -162,18 +162,14 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SvgPicture.asset(
-                                  item.svgPath,
-                                  width: 24,
-                                  height: 24,
-                                  colorFilter: ColorFilter.mode(
-                                    isActive && !isCart
-                                        ? Colors.white
-                                        : (isActive && isCart
-                                              ? AppTheme.primaryColor
-                                              : const Color(0xFF1B4D30)),
-                                    BlendMode.srcIn,
-                                  ),
+                                Icon(
+                                  item.icon,
+                                  size: 24,
+                                  color: isActive && !isCart
+                                      ? Colors.white
+                                      : (isActive && isCart
+                                          ? AppTheme.primaryColor
+                                          : const Color(0xFF1B4D30)),
                                 ),
                                 if (isActive && !isCart) ...[
                                   const SizedBox(width: 8),

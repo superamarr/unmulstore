@@ -63,15 +63,12 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
       case 'Diterima':
         return 4;
       case 'Dalam Masa Sewa':
-        return 5;
+        return 2;
       case 'Dikembalikan':
-        return 6;
-      case 'Selesai':
-        return 7;
+        return 3;
       default:
         if (status == 'Dalam Masa Sewa') return 2;
         if (status == 'Dikembalikan') return 3;
-        if (status == 'Selesai') return 4;
         return 0;
     }
   }
@@ -274,20 +271,12 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             icon: Icons.timer_outlined,
           ),
           _buildTimelineItem(
-            'Dikembalikan',
-            'Barang telah dikembalikan',
+            'Selesai',
+            'Barang telah diterima',
             isCompleted: statusIndex >= 3,
             isPending: statusIndex == 3,
-            isLast: false,
-            icon: Icons.assignment_return_outlined,
-          ),
-          _buildTimelineItem(
-            'Selesai',
-            'Deposit telah dikembalikan',
-            isCompleted: statusIndex >= 4,
-            isPending: statusIndex == 4,
             isLast: true,
-            icon: Icons.done_all,
+            icon: Icons.check_circle_outline,
           ),
         ],
       );
@@ -462,6 +451,13 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFCBD5E1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -549,41 +545,35 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             padding: EdgeInsets.symmetric(vertical: 20.0),
             child: _DottedDivider(),
           ),
+_buildDetailRow('Metode Pembayaran', paymentMethod),
+          const SizedBox(height: 8),
           if (paymentMethod != 'Bayar di Toko' && _order!.shippingCost > 0) ...[
             _buildDetailRow('Biaya Pengiriman', _formatPrice(_order!.shippingCost)),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
           ],
-          _buildDetailRow('Metode Pembayaran', paymentMethod),          if (isRental) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow('Durasi Sewa', '${_order!.rentalDuration} hari'),
-            const SizedBox(height: 12),
-            _buildDetailRow(
-              'Biaya Jaminan (Deposit)',
-              _formatPrice(_order!.deposit),
-            ),
-            if (_order!.lateFee > 0) ...[
-              const SizedBox(height: 12),
-              _buildDetailRow(
-                'Denda Keterlambatan',
-                _formatPrice(_order!.lateFee),
-                valueColor: const Color(0xFFEF4444),
-              ),
-            ],
+          if (paymentMethod != 'Bayar di Toko') ...[
+            const SizedBox(height: 8),
+            _buildDetailRow('Resi POS', '-'),
           ],
-          if (isCod || isRental) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow('Resi POS', _order!.resi ?? 'Belum Tersedia'),
+          
+          const SizedBox(height: 8),
+          _buildDetailRow('Subtotal', _formatPrice(_order!.totalPrice)),
+          const SizedBox(height: 8),
+          if (isRental && _order!.deposit > 0) ...[
+            _buildDetailRow('Deposit', _formatPrice(_order!.deposit)),
+            const SizedBox(height: 8),
           ],
-          if (isRental && _order!.returnResi != null) ...[
-            const SizedBox(height: 12),
-            _buildDetailRow('Resi Pengembalian', _order!.returnResi!),
+          if (isRental) ...[
+            _buildDendaRow(),
+            const SizedBox(height: 8),
           ],
-          const SizedBox(height: 12),
+          const Divider(color: Color(0xFFE2E8F0)),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Jumlah Pembayaran',
+                'Total Pembayaran',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -591,7 +581,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                 ),
               ),
               Text(
-                _formatPrice(_order!.totalPrice + _order!.lateFee),
+                _formatPrice(_order!.totalPrice + _order!.deposit + _order!.lateFee),
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w900,
                   fontSize: 16,
@@ -603,10 +593,15 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
           const SizedBox(height: 24),
           if (isRental && _order!.status == 'Dalam Masa Sewa') ...[
             PrimaryButton(
-              text: 'Kirim Balik & Input Resi',
+              text: 'Lihat Lokasi',
               fontWeight: FontWeight.w900,
-              onPressed: () => _showInputResiBalikDialog(context),
-              prefixIcon: Icons.assignment_return_outlined,
+              onPressed: () async {
+                final uri = Uri.parse('https://share.google/ZJBQhbS8serWOm8Tt');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              prefixIcon: Icons.location_on,
             ),
           ] else if (isLacakButtonVisible(_order!.status, paymentMethod)) ...[
             PrimaryButton(
@@ -616,7 +611,10 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
               fontWeight: FontWeight.w900,
               onPressed: () async {
                 if (paymentMethod == 'Bayar di Toko') {
-                  context.push('/order-status', extra: {'orderId': _order!.id});
+                  final uri = Uri.parse('https://share.google/ZJBQhbS8serWOm8Tt');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
                 } else {
                   final uri = Uri.parse(
                     'https://www.posindonesia.co.id/id/tracking',
@@ -631,7 +629,6 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                   : Icons.local_shipping,
             ),
           ],
-          const SizedBox(height: 12),
           if (_order!.status == 'Menunggu Verifikasi') ...[
             SizedBox(
               width: double.infinity,
@@ -661,102 +658,6 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
       return status == 'Siap Diambil';
     }
     return status == 'Dikirim';
-  }
-
-  void _showInputResiBalikDialog(BuildContext context) {
-    final TextEditingController resiController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Input Resi Pengembalian',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Masukkan nomor resi POS pengembalian barang Anda.',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: resiController,
-                decoration: InputDecoration(
-                  hintText: 'Nomor Resi POS',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Resi wajib diisi' : null,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Batal', style: GoogleFonts.poppins()),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (!formKey.currentState!.validate()) return;
-              final ok = await showConfirmActionSheet(
-                context,
-                variant: ConfirmActionVariant.save,
-                title: 'Simpan resi pengembalian?',
-                message:
-                    'Apakah Anda yakin nomor resi yang dimasukkan sudah benar?',
-              );
-              if (ok != true || !context.mounted) return;
-              Navigator.pop(context);
-              await _submitReturnResi(resiController.text);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFCC00),
-            ),
-            child: Text(
-              'Simpan',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _submitReturnResi(String resi) async {
-    setState(() => _isLoading = true);
-    try {
-      await _orderRepository.submitReturnResi(_order!.id, resi);
-
-      await _loadOrder();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Resi pengembalian berhasil disimpan')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal menyimpan resi: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   void _showCancellationDialog(BuildContext context) {
@@ -931,6 +832,30 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
         );
       }
     }
+  }
+
+  Widget _buildDendaRow() {
+    final now = DateTime.now();
+    final isLate = _order!.returnDeadline != null && now.isAfter(_order!.returnDeadline!);
+    if (isLate) {
+      final daysLate = now.difference(_order!.returnDeadline!).inDays;
+      return Column(
+        children: [
+          _buildDetailRow(
+            'Status Terlambat',
+            '+$daysLate hari',
+            valueColor: const Color(0xFFEF4444),
+          ),
+          const SizedBox(height: 8),
+          _buildDetailRow(
+            'Denda Keterlambatan',
+            _formatPrice(_order!.lateFee),
+            valueColor: const Color(0xFFEF4444),
+          ),
+        ],
+      );
+    }
+    return _buildDetailRow('Denda Keterlambatan', 'Rp 0');
   }
 
   Widget _buildDetailRow(

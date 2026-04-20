@@ -115,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               const SizedBox(width: 4),
                             Text(
                               profile?.phoneNumber?.isNotEmpty == true
-                                  ? profile!.phoneNumber!
+                                  ? profile!.phoneNumber!.replaceFirst('+62', '')
                                   : 'nomor hp belum di isi',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
@@ -178,11 +178,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Penyewaan Aktif',
                   onTap: () =>
                       context.push('/order-history?initialTab=1&showBack=true'),
-                ),
-                _buildMenuItem(
-                  icon: Icons.history_outlined,
-                  title: 'Riwayat Transaksi',
-                  onTap: () => context.push('/order-history?showBack=true'),
                 ),
 
                 const SizedBox(height: 24),
