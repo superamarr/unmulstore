@@ -117,7 +117,7 @@ class ProductCardWidget extends StatelessWidget {
                                 barrierColor: Colors.black.withValues(alpha: 0.45),
                                 builder: (context) => Padding(
                                   padding: EdgeInsets.only(
-                                    bottom: MediaQuery.viewInsetsOf(context).bottom,
+                                    bottom: MediaQuery.viewInsetsOf(context).bottom.clamp(0.0, double.infinity),
                                   ),
                                   child: ProductActionBottomSheet(
                                     product: product,

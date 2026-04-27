@@ -91,7 +91,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom.clamp(0.0, double.infinity);
 
     return Scaffold(
       resizeToAvoidBottomInset: true,

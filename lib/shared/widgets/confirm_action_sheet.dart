@@ -247,7 +247,7 @@ Future<bool?> showConfirmActionSheet(
       final width = MediaQuery.sizeOf(ctx).width;
       return Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(ctx).bottom,
+          bottom: MediaQuery.viewInsetsOf(ctx).bottom.clamp(0.0, double.infinity),
         ),
         child: SizedBox(
           width: width,

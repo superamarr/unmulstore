@@ -20,8 +20,11 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedCategory = 'Semua';
   final ProductRepository _productRepository = ProductRepository();
   final HomeBannerRepository _bannerRepository = HomeBannerRepository();
+  final TextEditingController _searchController = TextEditingController();
+  List<ProductModel> _allProducts = [];
+  bool _isSearching = false;
 
-  Widget _buildCategoryChip(String label) {
+Widget _buildCategoryChip(String label) {
     bool isSelected = _selectedCategory == label;
     return GestureDetector(
       onTap: () {
@@ -49,6 +52,36 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<ProductModel> _applyFilters() {
+    String query = _searchController.text.toLowerCase().trim();
+    _isSearching = query.isNotEmpty;
+
+    List<ProductModel> filtered = _allProducts.where((product) {
+      bool matchesCategory;
+      if (_selectedCategory == 'Semua') {
+        matchesCategory = true;
+      } else if (_selectedCategory == 'Sewa') {
+        matchesCategory = product.isRentable == true;
+      } else {
+        matchesCategory = product.isRentable == false;
+      }
+
+      bool matchesSearch = query.isEmpty ||
+          product.title.toLowerCase().contains(query) ||
+          product.description.toLowerCase().contains(query);
+
+      return matchesCategory && matchesSearch;
+    }).toList();
+
+return filtered;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -56,6 +89,12 @@ class _HomeScreenState extends State<HomeScreen> {
         child: FutureBuilder<List<ProductModel>>(
           future: _productRepository.getProductsByCategory(_selectedCategory),
           builder: (context, snapshot) {
+            if (snapshot.hasData && _allProducts.isEmpty) {
+              _allProducts = snapshot.data!;
+            }
+
+            final displayProducts = _applyFilters();
+
             return CustomScrollView(
               physics: const ClampingScrollPhysics(),
               slivers: [
@@ -178,6 +217,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                           child: TextField(
+                            controller: _searchController,
+                            onChanged: (value) {
+                              setState(() {});
+                            },
                             decoration: InputDecoration(
                               hintText: 'Cari Produk',
                               hintStyle: GoogleFonts.poppins(
@@ -245,9 +288,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   SliverFillRemaining(
                     child: Center(child: Text('Error: ${snapshot.error}')),
                   )
-                else if (!snapshot.hasData || snapshot.data!.isEmpty)
-                  const SliverFillRemaining(
-                    child: Center(child: Text('Tidak ada produk.')),
+                else if (displayProducts.isEmpty)
+                  SliverFillRemaining(
+                    child: Center(child: Text(_isSearching ? 'Produk tidak ditemukan.' : 'Tidak ada produk.')),
                   )
                 else
                   SliverPadding(
@@ -262,9 +305,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                       delegate: SliverChildBuilderDelegate((context, index) {
                         return ProductCardWidget(
-                          product: snapshot.data![index],
+                          product: displayProducts[index],
                         );
-                      }, childCount: snapshot.data!.length),
+                      }, childCount: displayProducts.length),
                     ),
                   ),
 

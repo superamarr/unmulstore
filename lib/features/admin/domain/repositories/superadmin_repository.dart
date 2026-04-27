@@ -172,6 +172,14 @@ class SuperAdminRepository {
 
   Future<void> deleteProduct(String id) async {
     try {
+      // 1. Hapus produk dari keranjang belanja agar tidak tersangkut
+      await _supabase.from('cart_items').delete().eq('product_id', id);
+
+      // 2. Kosongkan referensi product_id di order_items agar history pesanan tetap aman
+      // tanpa melanggar foreign key constraint
+      await _supabase.from('order_items').update({'product_id': null}).eq('product_id', id);
+
+      // 3. Setelah tidak ada referensi (foreign key aman), hapus produk
       await _supabase.from('products').delete().eq('id', id);
     } catch (e) {
       debugPrint('Error deleting product: $e');

@@ -61,16 +61,29 @@ class _KelolaAdminScreenState extends State<KelolaAdminScreen> {
   }
 
   Future<void> _updateRole(String id, String newRole) async {
+    // Simpan data lama untuk berjaga-jaga jika gagal (revert)
+    final deletedProfileIndex = _profiles.indexWhere((p) => p['id'] == id);
+    final deletedProfile = deletedProfileIndex != -1 ? _profiles[deletedProfileIndex] : null;
+
+    // Optimistic Update: Langsung hapus dari tampilan UI agar terasa instan
+    setState(() {
+      _profiles.removeWhere((p) => p['id'] == id);
+    });
+
     try {
       await _repo.updateUserRole(id, newRole);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Berhasil mengubah role menjadi $newRole')),
+          const SnackBar(content: Text('Berhasil menghapus akses admin.')),
         );
-        _loadProfiles();
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          if (deletedProfile != null && !_profiles.contains(deletedProfile)) {
+            _profiles.insert(deletedProfileIndex, deletedProfile);
+          }
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString())),
         );

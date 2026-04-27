@@ -22,22 +22,29 @@ class CartRepository {
     }
   }
 
-  Future<void> addToCart(CartItemModel item) async {
+Future<void> addToCart(CartItemModel item) async {
     try {
-      // Check if item already exists
-      final existing = await _supabase
+      final String variationValue = item.variation ?? '';
+
+      final existingQuery = _supabase
           .from('cart_items')
           .select()
           .eq('user_id', item.userId)
           .eq('product_id', item.productId)
-          .eq('variation', item.variation ?? '')
-          .maybeSingle();
+          .eq('is_rental', item.isRental);
+
+      final existing = await existingQuery.maybeSingle();
 
       if (existing != null) {
-        await _supabase
-            .from('cart_items')
-            .update({'quantity': (existing['quantity'] as int) + item.quantity})
-            .eq('id', existing['id']);
+        final existingVariation = existing['variation'] as String? ?? '';
+        if (existingVariation == variationValue) {
+          await _supabase
+              .from('cart_items')
+              .update({'quantity': (existing['quantity'] as int) + item.quantity})
+              .eq('id', existing['id']);
+        } else {
+          await _supabase.from('cart_items').insert(item.toMap());
+        }
       } else {
         await _supabase.from('cart_items').insert(item.toMap());
       }

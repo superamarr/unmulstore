@@ -726,7 +726,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
+          bottom: MediaQuery.viewInsetsOf(context).bottom.clamp(0.0, double.infinity),
         ),
         child: Container(
           decoration: const BoxDecoration(
