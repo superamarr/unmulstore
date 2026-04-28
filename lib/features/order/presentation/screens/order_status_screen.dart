@@ -77,7 +77,7 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
       case 'Siap Diambil':
         return 2;
       case 'Dikirim':
-        return 3;
+        return 2;
       case 'Diterima':
         return 4;
       case 'Dalam Masa Sewa':
@@ -330,8 +330,8 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             _order!.resi != null && _order!.resi!.trim().isNotEmpty
                 ? 'Kurir sedang dalam perjalanan (Resi: ${_order!.resi})'
                 : 'Kurir sedang dalam perjalanan',
-            isCompleted: statusIndex >= 3,
-            isPending: statusIndex == 3,
+            isCompleted: statusIndex >= 2,
+            isPending: statusIndex == 2,
             isLast: false,
             icon: Icons.local_shipping_outlined,
           )
@@ -344,14 +344,14 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
             isLast: false,
             icon: Icons.storefront,
           ),
-        _buildTimelineItem(
-          'Selesai',
-          isCod ? 'Barang telah diterima.' : 'Terima kasih telah berbelanja.',
-          isCompleted: statusIndex >= 7,
-          isPending: statusIndex == 7,
-          isLast: true,
-          icon: Icons.check,
-        ),
+         _buildTimelineItem(
+           'Selesai',
+           isCod ? 'Barang telah diterima.' : 'Terima kasih telah berbelanja.',
+           isCompleted: statusIndex >= 3,
+           isPending: statusIndex == 3,
+           isLast: true,
+           icon: Icons.check,
+         ),
       ],
     );
   }
