@@ -11,6 +11,7 @@ class CustomTextField extends StatelessWidget {
   final bool obscureText;
   final Widget? suffixIcon;
   final int? maxLength;
+  final int? maxLines;
   final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
@@ -22,6 +23,7 @@ class CustomTextField extends StatelessWidget {
     this.obscureText = false,
     this.suffixIcon,
     this.maxLength,
+    this.maxLines = 1,
     this.inputFormatters,
   });
 
@@ -32,6 +34,7 @@ class CustomTextField extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       maxLength: maxLength,
+      maxLines: maxLines,
       inputFormatters: inputFormatters,
       style: GoogleFonts.poppins(
         color: AppTheme.textColor,

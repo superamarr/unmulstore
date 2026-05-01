@@ -156,8 +156,12 @@ class AdminRepository {
       onListen: () async {
         await emitFetch();
         realtimeSub = watchOrdersRealtime().listen(
-          (data) => controller.add(data),
-          onError: (e, st) => controller.addError(e, st),
+          (data) {
+            if (!controller.isClosed) controller.add(data);
+          },
+          onError: (e, st) {
+            if (!controller.isClosed) controller.addError(e, st);
+          },
         );
         timer = Timer.periodic(pollingInterval, (_) => emitFetch());
       },

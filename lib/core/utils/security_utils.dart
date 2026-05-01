@@ -54,9 +54,7 @@ class SecurityUtils {
   static String preventXSS(String input) {
     if (input.isEmpty) return '';
     
-    String sanitized = input;
-    
-    sanitized = _scriptPattern.allMatches(sanitized).map((m) => '').join('');
+    String sanitized = input.replaceAll(_scriptPattern, '');
     
     sanitized = sanitizeInput(sanitized);
     

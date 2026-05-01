@@ -190,11 +190,14 @@ class SuperAdminRepository {
   // To be implemented fully when storage is ready
   Future<void> saveProduct(Map<String, dynamic> productData) async {
     try {
-      if (productData.containsKey('id') && productData['id'] != null) {
+      final id = productData['id'];
+      if (id != null) {
+        // Remove ID from payload to avoid updating the primary key column
+        final dataToUpdate = Map<String, dynamic>.from(productData)..remove('id');
         await _supabase
             .from('products')
-            .update(productData)
-            .eq('id', productData['id']);
+            .update(dataToUpdate)
+            .eq('id', id);
       } else {
         productData.remove('id');
         await _supabase.from('products').insert(productData);

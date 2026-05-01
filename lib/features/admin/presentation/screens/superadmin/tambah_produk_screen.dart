@@ -418,6 +418,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                     hintText: 'Penjelasan detail produk',
                     controller: _descCtrl,
                     maxLength: 500,
+                    maxLines: null,
                   ),
 
                   const SizedBox(height: 16),
@@ -495,6 +496,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                     hintText: 'Bahan, Kualitas sablon, dll',
                     controller: _specCtrl,
                     maxLength: 500,
+                    maxLines: null,
                   ),
 
                   const SizedBox(height: 16),
@@ -504,6 +506,7 @@ class _TambahProdukScreenState extends State<TambahProdukScreen> {
                     hintText: 'S: Lebar 48x68, M: 50x70...',
                     controller: _sizeGuideCtrl,
                     maxLength: 500,
+                    maxLines: null,
                   ),
 
                   const SizedBox(height: 16),
